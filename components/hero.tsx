@@ -13,7 +13,7 @@ export default function Hero() {
         {/* Placeholder for screenshots */}
         <span className="text-black">[Screenshots Placeholder]</span>
       </div>
-      <Link href="/auth/sign-up" passHref>
+      <Link href="/sign-up" passHref>
         <Button as={NextUILink} color="primary">
           Sign Up
         </Button>

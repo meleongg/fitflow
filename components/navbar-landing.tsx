@@ -18,14 +18,14 @@ export default function NavbarLanding() {
       </NavbarBrand>
       <NavbarContent justify="end">
         <NavbarItem>
-          <Link href="/auth/login" passHref>
+          <Link href="/sign-in" passHref>
             <Button as={NextUILink} color="primary">
-              Login
+              Sign In
             </Button>
           </Link>
         </NavbarItem>
         <NavbarItem>
-          <Link href="/auth/sign-up" passHref>
+          <Link href="/sign-up" passHref>
             <Button as={NextUILink} color="primary">
               Sign Up
             </Button>
