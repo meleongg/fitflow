@@ -6,11 +6,13 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   return (
-    <>
-      <div className="max-w-7xl flex flex-col gap-12 items-start py-8">
-        {children}
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1">
+        <div className="w-full flex flex-col gap-12 items-start py-8">
+          {children}
+        </div>
       </div>
       <Navbar />
-    </>
+    </div>
   );
 }

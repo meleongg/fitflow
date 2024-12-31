@@ -26,9 +26,7 @@ export default function RootLayout({
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
       <body className="bg-background text-foreground">
         <Providers>
-          <main className="min-h-screen flex flex-col items-center">
-            {children}
-          </main>
+          <main className="min-h-screen flex flex-col">{children}</main>
         </Providers>
       </body>
     </html>
