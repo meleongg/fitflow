@@ -7,12 +7,12 @@ export default async function Layout({
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="flex-1">
-        <div className="w-full flex flex-col gap-12 items-start py-8">
-          {children}
-        </div>
+      <div className="w-full flex flex-col flex-1 gap-12 items-start py-8">
+        {children}
       </div>
-      <Navbar />
+      <footer className="sticky bottom-0 w-full">
+        <Navbar />
+      </footer>
     </div>
   );
 }
