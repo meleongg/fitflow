@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export default function PageTitle({ title }: { title: string }) {
   return (
-    <div className="flex justify-between items-center w-full px-8">
+    <div className="flex justify-between items-center w-full">
       <h1 className="font-bold text-4xl">{title}</h1>
       <div className="flex gap-2 ml-auto">
         <Button isIconOnly as={Link} href="/settings" color="primary">

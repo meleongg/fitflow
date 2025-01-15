@@ -52,14 +52,10 @@ const Actions = ({
           </Button>
         </DropdownTrigger>
         <DropdownMenu>
-          <DropdownItem key="view" as={Link} href={`/protected/workouts/${id}`}>
+          <DropdownItem key="view" as={Link} href={`/workouts/${id}`}>
             View
           </DropdownItem>
-          <DropdownItem
-            key="edit"
-            as={Link}
-            href={`/protected/workouts/${id}/edit`}
-          >
+          <DropdownItem key="edit" as={Link} href={`/workouts/${id}/edit`}>
             Edit
           </DropdownItem>
           <DropdownItem
@@ -75,46 +71,35 @@ const Actions = ({
   );
 };
 
-export default function Workouts() {
-  const [workouts, setWorkouts] = useState<any[] | null>(null);
+export default function ViewWorkout() {
+  const [workoutExercises, setWorkoutExercises] = useState<any[] | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
-    const getData = async () => {
-      const data = await getWorkoutData(supabase);
-      setWorkouts(data);
-    };
-    getData();
+    // TODO: Fetch existing workout names and check for duplicates
   }, []);
 
   return (
     <>
-      <PageTitle title="Workouts" />
-      {/* <pre className="w-full">{JSON.stringify(workouts, null, 2)}</pre> */}
+      <PageTitle title="New Workout" />
       <div className="bg-creamyBeige p-4 rounded-lg">
-        This is the workout library. Create workouts or start sessions!
+        Choose from our existing exercises or create your own.
       </div>
-      <Button
-        as={Link}
-        href="/protected/workouts/create-workout"
-        color="primary"
-      >
-        Create Workout
-      </Button>
+      <Button color="primary">Add Exercise</Button>
       <Table aria-label="Example static collection table">
         <TableHeader>
           <TableColumn>NAME</TableColumn>
           <TableColumn>ACTIONS</TableColumn>
         </TableHeader>
         <TableBody>
-          {(workouts || []).map((workout) => (
-            <TableRow key={workout.id}>
-              <TableCell>{workout.name}</TableCell>
-              <TableCell>
-                <Actions id={workout.id} setWorkouts={setWorkouts} />
-              </TableCell>
-            </TableRow>
-          ))}
+          <TableRow>
+            <TableCell>Exericse 1</TableCell>
+            <TableCell>Exericse 1</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>Exericse 2</TableCell>
+            <TableCell>Exericse 1</TableCell>
+          </TableRow>
         </TableBody>
       </Table>
     </>

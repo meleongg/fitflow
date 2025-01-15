@@ -12,7 +12,6 @@ export default function Navbar() {
     <NextUINavbar
       position="sticky"
       className="bg-oatBrown w-full flex justify-center pt-4 pb-4 bottom-0"
-      z-50
     >
       <NavbarContent justify="center" className="flex justify-center w-full">
         <NavbarItem className="flex flex-col justify-center items-center text-center">
