@@ -166,16 +166,31 @@ export default function CreateWorkout() {
     const data = Object.fromEntries(
       new FormData(e.currentTarget as HTMLFormElement)
     );
-    const { workoutName, workoutDescription } = data;
+    const { name: workoutName, description: workoutDescription } = data;
 
     setErrors({});
 
     try {
+      // Get the authenticated user
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        throw new Error("Unable to fetch user information");
+      }
+
+      if (!user) {
+        throw new Error("No authenticated user found");
+      }
+
       const { data: newWorkout, error: workoutError } = await supabase
         .from("workouts")
         .insert({
           name: workoutName,
           description: workoutDescription,
+          user_id: user.id,
         })
         .select()
         .single();
@@ -189,11 +204,13 @@ export default function CreateWorkout() {
 
       // Create associated WorkoutExercise entries
       const workoutExerciseEntries = workoutExercises.map((exercise) => ({
+        user_id: user.id,
         workout_id: workoutId,
         exercise_id: exercise.id,
         sets: exercise.sets,
         reps: exercise.reps,
         weight: exercise.weight,
+        exercise_order: 0, // default value for now
       }));
 
       const { error: exercisesError } = await supabase
@@ -207,7 +224,9 @@ export default function CreateWorkout() {
 
       alert("Workout and exercises successfully created!");
       setWorkoutExercises([]); // Clear exercises after submission
-      e.currentTarget.reset(); // Reset form fields
+      // e.currentTarget.reset(); // Reset form fields
+
+      // TODO: Redirect to the workout details page
     } catch (error: any) {
       console.error("Unexpected Error", error);
     }
