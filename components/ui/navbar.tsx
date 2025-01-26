@@ -15,25 +15,45 @@ export default function Navbar() {
     >
       <NavbarContent justify="center" className="flex justify-center w-full">
         <NavbarItem className="flex flex-col justify-center items-center text-center">
-          <Button isIconOnly as={Link} href="/workouts" color="primary">
+          <Button
+            isIconOnly
+            as={Link}
+            href="/protected/workouts"
+            color="primary"
+          >
             <Library />
           </Button>
           <h4 className="mt-1">Workouts</h4>
         </NavbarItem>
         <NavbarItem className="flex flex-col justify-center items-center text-center">
-          <Button isIconOnly as={Link} href="/exercises" color="primary">
+          <Button
+            isIconOnly
+            as={Link}
+            href="/protected/exercises"
+            color="primary"
+          >
             <BicepsFlexed />
           </Button>
           <h4 className="mt-1">Exercises</h4>
         </NavbarItem>
         <NavbarItem className="flex flex-col justify-center items-center text-center">
-          <Button isIconOnly as={Link} href="/sessions" color="primary">
+          <Button
+            isIconOnly
+            as={Link}
+            href="/protected/sessions"
+            color="primary"
+          >
             <History />
           </Button>
           <h4 className="mt-1">Sessions</h4>
         </NavbarItem>
         <NavbarItem className="flex flex-col justify-center items-center text-center">
-          <Button isIconOnly as={Link} href="/exercises" color="primary">
+          <Button
+            isIconOnly
+            as={Link}
+            href="/protected/exercises"
+            color="primary"
+          >
             <ChartLine />
           </Button>
           <h4 className="mt-1">Analytics</h4>
