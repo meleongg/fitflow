@@ -160,28 +160,56 @@ export default function CreateWorkout() {
     }
   };
 
-  const onSubmit = (e: any) => {
+  const onWorkoutSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.currentTarget));
 
-    // Custom validation checks
-    const newErrors: { [key: string]: string } = {};
+    const data = Object.fromEntries(
+      new FormData(e.currentTarget as HTMLFormElement)
+    );
+    const { workoutName, workoutDescription } = data;
 
-    // Username validation
-    if (data.name === "admin") {
-      newErrors.name = "Nice try! Choose a different username";
-    }
+    setErrors({});
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    try {
+      const { data: newWorkout, error: workoutError } = await supabase
+        .from("workouts")
+        .insert({
+          name: workoutName,
+          description: workoutDescription,
+        })
+        .select()
+        .single();
 
-      return;
-    }
+      if (workoutError || !newWorkout) {
+        console.error("Error creating workout:", workoutError);
+        return;
+      }
 
-    if (data.terms !== "true") {
-      setErrors({ terms: "Please accept the terms" });
+      const workoutId = newWorkout.id;
 
-      return;
+      // Create associated WorkoutExercise entries
+      const workoutExerciseEntries = workoutExercises.map((exercise) => ({
+        workout_id: workoutId,
+        exercise_id: exercise.id,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        weight: exercise.weight,
+      }));
+
+      const { error: exercisesError } = await supabase
+        .from("workout_exercises")
+        .insert(workoutExerciseEntries);
+
+      if (exercisesError) {
+        console.error("Error creating workout exercises:", exercisesError);
+        return;
+      }
+
+      alert("Workout and exercises successfully created!");
+      setWorkoutExercises([]); // Clear exercises after submission
+      e.currentTarget.reset(); // Reset form fields
+    } catch (error: any) {
+      console.error("Unexpected Error", error);
     }
 
     // Clear errors and submit
@@ -202,7 +230,7 @@ export default function CreateWorkout() {
         validationBehavior="native"
         validationErrors={errors}
         onReset={() => setSubmitted(null)}
-        onSubmit={onSubmit}
+        onSubmit={onWorkoutSubmit}
       >
         <div className="flex flex-col gap-4 max-w-md">
           <Input
@@ -442,7 +470,9 @@ export default function CreateWorkout() {
                     label="Category"
                     placeholder="Select a category"
                     value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    onChange={(e) =>
+                      setSelectedCategory(Number(e.target.value))
+                    }
                     name="exerciseCategory"
                   >
                     {categories.map((category) => (
