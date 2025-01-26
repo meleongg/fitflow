@@ -95,7 +95,13 @@ export default function CreateWorkout() {
   const handleAddExercise = (exercise: any) => {
     setWorkoutExercises((prev) => [
       ...prev,
-      { ...exercise, sets: 1, reps: 10, weight: 0 },
+      {
+        ...exercise,
+        sets: 1,
+        reps: 10,
+        weight: 0,
+        exercise_order: prev.length,
+      },
     ]);
     onClose();
   };
@@ -210,7 +216,7 @@ export default function CreateWorkout() {
         sets: exercise.sets,
         reps: exercise.reps,
         weight: exercise.weight,
-        exercise_order: 0, // default value for now
+        exercise_order: exercise.exercise_order,
       }));
 
       const { error: exercisesError } = await supabase
@@ -227,6 +233,7 @@ export default function CreateWorkout() {
       // e.currentTarget.reset(); // Reset form fields
 
       // TODO: Redirect to the workout details page
+      // TODO: Add a toast notification for successful submission
     } catch (error: any) {
       console.error("Unexpected Error", error);
     }
@@ -245,7 +252,7 @@ export default function CreateWorkout() {
       </div>
 
       <Form
-        className="w-full justify-center items-center space-y-4"
+        className="max-w-full justify-center items-center space-y-4"
         validationBehavior="native"
         validationErrors={errors}
         onReset={() => setSubmitted(null)}
@@ -284,7 +291,237 @@ export default function CreateWorkout() {
             type="text"
           />
 
-          <div className="flex gap-4">
+          <h2>Exercises</h2>
+
+          <div className="w-full">
+            <Table aria-label="Exercise table">
+              <TableHeader>
+                <TableColumn>NAME</TableColumn>
+                <TableColumn>SETS</TableColumn>
+                <TableColumn>REPS</TableColumn>
+                <TableColumn>WEIGHT</TableColumn>
+                <TableColumn>ACTIONS</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {workoutExercises.map((exercise, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{exercise.name}</TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={exercise.sets}
+                        classNames={{
+                          input: "min-w-4",
+                        }}
+                        onChange={(e) =>
+                          setWorkoutExercises((prev) =>
+                            prev.map((ex, i) =>
+                              i === index
+                                ? { ...ex, sets: +e.target.value }
+                                : ex
+                            )
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={exercise.reps}
+                        classNames={{
+                          input: "min-w-4",
+                        }}
+                        onChange={(e) =>
+                          setWorkoutExercises((prev) =>
+                            prev.map((ex, i) =>
+                              i === index
+                                ? { ...ex, reps: +e.target.value }
+                                : ex
+                            )
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={exercise.weight}
+                        classNames={{
+                          input: "min-w-4",
+                        }}
+                        onChange={(e) =>
+                          setWorkoutExercises((prev) =>
+                            prev.map((ex, i) =>
+                              i === index
+                                ? { ...ex, weight: +e.target.value }
+                                : ex
+                            )
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        color="danger"
+                        onPress={() =>
+                          setWorkoutExercises((prev) =>
+                            prev.filter((_, i) => i !== index)
+                          )
+                        }
+                      >
+                        Delete
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex gap-4 mt-4">
+            <div>
+              <Button color="primary" onPress={onOpen}>
+                Add Exercise
+              </Button>
+            </div>
+            <div>
+              <Button color="secondary" onPress={onCustomOpen}>
+                Add Custom Exercise
+              </Button>
+            </div>
+          </div>
+
+          {/* Modal for Selecting Exercises */}
+          <Modal
+            backdrop="opaque"
+            isOpen={isOpen}
+            onClose={onClose}
+            radius="lg"
+            onOpenChange={onOpenChange}
+            className="flex items-center justify-center"
+          >
+            <ModalContent>
+              {(onClose) => (
+                <>
+                  <ModalHeader>
+                    <h3 className="text-lg font-bold">Select Exercise</h3>
+                  </ModalHeader>
+                  <ModalBody>
+                    <Table aria-label="Available Exercises">
+                      <TableHeader>
+                        <TableColumn>NAME</TableColumn>
+                        <TableColumn>CATEGORY</TableColumn>
+                        <TableColumn>ACTION</TableColumn>
+                      </TableHeader>
+                      <TableBody>
+                        {exercises.map((exercise) => (
+                          <TableRow key={exercise.id}>
+                            <TableCell>{exercise.name}</TableCell>
+                            <TableCell>
+                              {exercise.categories?.name || "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                color="primary"
+                                onPress={() => handleAddExercise(exercise)}
+                              >
+                                Add
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <Pagination
+                      total={totalPages}
+                      initialPage={currentPage}
+                      onChange={(page) => setCurrentPage(page)}
+                    />
+                  </ModalBody>
+                  <ModalFooter>
+                    <Button color="secondary" onPress={onClose}>
+                      Close
+                    </Button>
+                  </ModalFooter>
+                </>
+              )}
+            </ModalContent>
+          </Modal>
+
+          {/* Modal for Adding Custom Exercise */}
+          <Modal
+            backdrop="opaque"
+            isOpen={isCustomOpen}
+            onClose={onCustomClose}
+            radius="lg"
+            onOpenChange={onCustomOpenChange}
+            className="flex items-center justify-center"
+          >
+            <ModalContent>
+              {(onCustomClose) => (
+                <>
+                  <ModalHeader>
+                    <h3 className="text-lg font-bold">Add Custom Exercise</h3>
+                  </ModalHeader>
+                  <ModalBody>
+                    <div className="bg-yellow-100 text-yellow-700 p-2 rounded mb-4">
+                      <strong>NOTE:</strong> Creating a custom exercise here
+                      will add it to your Exercise Library.
+                    </div>
+
+                    {/* Add your form inputs for creating a custom exercise */}
+                    <Form
+                      onSubmit={handleCustomExerciseSubmit}
+                      className="space-y-4"
+                    >
+                      <Input
+                        isRequired
+                        label="Exercise Name"
+                        name="exerciseName"
+                        placeholder="Enter exercise name"
+                      />
+
+                      {/* Dropdown for categories */}
+                      <Select
+                        isRequired
+                        label="Category"
+                        placeholder="Select a category"
+                        value={selectedCategory}
+                        onChange={(e) =>
+                          setSelectedCategory(Number(e.target.value))
+                        }
+                        name="exerciseCategory"
+                      >
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </Select>
+
+                      <Input
+                        label="Description"
+                        name="exerciseDescription"
+                        placeholder="Optional description"
+                        type="text"
+                      />
+
+                      <Button type="submit" color="primary" className="w-full">
+                        Add Exercise
+                      </Button>
+                    </Form>
+                  </ModalBody>
+                  <ModalFooter>
+                    <Button color="secondary" onPress={onCustomClose}>
+                      Close
+                    </Button>
+                  </ModalFooter>
+                </>
+              )}
+            </ModalContent>
+          </Modal>
+          <div className="flex gap-4 mt-6">
             <Button className="w-full" color="primary" type="submit">
               Submit
             </Button>
@@ -300,228 +537,6 @@ export default function CreateWorkout() {
           </div>
         )}
       </Form>
-
-      <h2>Exercises</h2>
-      <Table aria-label="Exercise table">
-        <TableHeader>
-          <TableColumn>NAME</TableColumn>
-          <TableColumn>SETS</TableColumn>
-          <TableColumn>REPS</TableColumn>
-          <TableColumn>WEIGHT</TableColumn>
-          <TableColumn>ACTIONS</TableColumn>
-        </TableHeader>
-        <TableBody>
-          {workoutExercises.map((exercise, index) => (
-            <TableRow key={index}>
-              <TableCell>{exercise.name}</TableCell>
-              <TableCell>
-                <Input
-                  type="number"
-                  value={exercise.sets}
-                  classNames={{
-                    input: "min-w-4",
-                  }}
-                  onChange={(e) =>
-                    setWorkoutExercises((prev) =>
-                      prev.map((ex, i) =>
-                        i === index ? { ...ex, sets: +e.target.value } : ex
-                      )
-                    )
-                  }
-                />
-              </TableCell>
-              <TableCell>
-                <Input
-                  type="number"
-                  value={exercise.reps}
-                  classNames={{
-                    input: "min-w-4",
-                  }}
-                  onChange={(e) =>
-                    setWorkoutExercises((prev) =>
-                      prev.map((ex, i) =>
-                        i === index ? { ...ex, reps: +e.target.value } : ex
-                      )
-                    )
-                  }
-                />
-              </TableCell>
-              <TableCell>
-                <Input
-                  type="number"
-                  value={exercise.weight}
-                  classNames={{
-                    input: "min-w-4",
-                  }}
-                  onChange={(e) =>
-                    setWorkoutExercises((prev) =>
-                      prev.map((ex, i) =>
-                        i === index ? { ...ex, weight: +e.target.value } : ex
-                      )
-                    )
-                  }
-                />
-              </TableCell>
-              <TableCell>
-                <Button
-                  color="danger"
-                  onPress={() =>
-                    setWorkoutExercises((prev) =>
-                      prev.filter((_, i) => i !== index)
-                    )
-                  }
-                >
-                  Delete
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-
-      <div className="flex gap-4 mt-4">
-        <div>
-          <Button color="primary" onPress={onOpen}>
-            Add Exercise
-          </Button>
-        </div>
-        <div>
-          <Button color="secondary" onPress={onCustomOpen}>
-            Add Custom Exercise
-          </Button>
-        </div>
-      </div>
-
-      {/* Modal for Selecting Exercises */}
-      <Modal
-        backdrop="opaque"
-        isOpen={isOpen}
-        onClose={onClose}
-        radius="lg"
-        onOpenChange={onOpenChange}
-        className="flex items-center justify-center"
-      >
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>
-                <h3 className="text-lg font-bold">Select Exercise</h3>
-              </ModalHeader>
-              <ModalBody>
-                <Table aria-label="Available Exercises">
-                  <TableHeader>
-                    <TableColumn>NAME</TableColumn>
-                    <TableColumn>CATEGORY</TableColumn>
-                    <TableColumn>ACTION</TableColumn>
-                  </TableHeader>
-                  <TableBody>
-                    {exercises.map((exercise) => (
-                      <TableRow key={exercise.id}>
-                        <TableCell>{exercise.name}</TableCell>
-                        <TableCell>
-                          {exercise.categories?.name || "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            color="primary"
-                            onPress={() => handleAddExercise(exercise)}
-                          >
-                            Add
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Pagination
-                  total={totalPages}
-                  initialPage={currentPage}
-                  onChange={(page) => setCurrentPage(page)}
-                />
-              </ModalBody>
-              <ModalFooter>
-                <Button color="secondary" onPress={onClose}>
-                  Close
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
-
-      {/* Modal for Adding Custom Exercise */}
-      <Modal
-        backdrop="opaque"
-        isOpen={isCustomOpen}
-        onClose={onCustomClose}
-        radius="lg"
-        onOpenChange={onCustomOpenChange}
-        className="flex items-center justify-center"
-      >
-        <ModalContent>
-          {(onCustomClose) => (
-            <>
-              <ModalHeader>
-                <h3 className="text-lg font-bold">Add Custom Exercise</h3>
-              </ModalHeader>
-              <ModalBody>
-                <div className="bg-yellow-100 text-yellow-700 p-2 rounded mb-4">
-                  <strong>NOTE:</strong> Creating a custom exercise here will
-                  add it to your Exercise Library.
-                </div>
-
-                {/* Add your form inputs for creating a custom exercise */}
-                <Form
-                  onSubmit={handleCustomExerciseSubmit}
-                  className="space-y-4"
-                >
-                  <Input
-                    isRequired
-                    label="Exercise Name"
-                    name="exerciseName"
-                    placeholder="Enter exercise name"
-                  />
-
-                  {/* Dropdown for categories */}
-                  <Select
-                    isRequired
-                    label="Category"
-                    placeholder="Select a category"
-                    value={selectedCategory}
-                    onChange={(e) =>
-                      setSelectedCategory(Number(e.target.value))
-                    }
-                    name="exerciseCategory"
-                  >
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </Select>
-
-                  <Input
-                    label="Description"
-                    name="exerciseDescription"
-                    placeholder="Optional description"
-                    type="text"
-                  />
-
-                  <Button type="submit" color="primary" className="w-full">
-                    Add Exercise
-                  </Button>
-                </Form>
-              </ModalBody>
-              <ModalFooter>
-                <Button color="secondary" onPress={onCustomClose}>
-                  Close
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
     </>
   );
 }
