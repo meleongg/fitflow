@@ -1,13 +1,10 @@
 "use client";
 
+import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
 import { createClient } from "@/utils/supabase/client";
 import {
   Button,
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
   Table,
   TableBody,
   TableCell,
@@ -15,91 +12,110 @@ import {
   TableHeader,
   TableRow,
 } from "@nextui-org/react";
-import { EllipsisVertical } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const getWorkoutData = async (supabase: any) => {
-  const { data } = await supabase.from("workouts").select();
-  return data;
+// Fetch workout data
+const getWorkoutData = async (supabase: any, workoutId: string) => {
+  const { data: workout, error } = await supabase
+    .from("workouts")
+    .select("*")
+    .eq("id", workoutId)
+    .single();
+
+  if (error) throw error;
+  return workout;
 };
 
-const Actions = ({
-  id,
-  setWorkouts,
-}: {
-  id: string;
-  setWorkouts: React.Dispatch<React.SetStateAction<any[] | null>>;
-}) => {
-  const supabase = createClient();
+// Fetch workout exercises with exercise details
+const getWorkoutExercises = async (supabase: any, workoutId: string) => {
+  const { data: workoutExercises, error } = await supabase
+    .from("workout_exercises")
+    .select(
+      `
+      *,
+      exercise:exercises(*)
+    `
+    )
+    .eq("workout_id", workoutId);
 
-  const deleteWorkout = async (workoutId: string) => {
-    try {
-      await supabase.from("workouts").delete().eq("id", workoutId);
-      const data = await getWorkoutData(supabase);
-      setWorkouts(data);
-    } catch (error) {
-      console.error("Error deleting workout:", error);
-    }
-  };
-
-  return (
-    <div className="relative flex justify-end items-center gap-2">
-      <Dropdown className="bg-background border-1 border-default-200">
-        <DropdownTrigger>
-          <Button isIconOnly radius="full" size="sm" variant="light">
-            <EllipsisVertical />
-          </Button>
-        </DropdownTrigger>
-        <DropdownMenu>
-          <DropdownItem key="view" as={Link} href={`/workouts/${id}`}>
-            View
-          </DropdownItem>
-          <DropdownItem key="edit" as={Link} href={`/workouts/${id}/edit`}>
-            Edit
-          </DropdownItem>
-          <DropdownItem
-            className="text-danger"
-            onPress={() => deleteWorkout(id)}
-            key="delete"
-          >
-            Delete
-          </DropdownItem>
-        </DropdownMenu>
-      </Dropdown>
-    </div>
-  );
+  if (error) throw error;
+  return workoutExercises;
 };
 
 export default function ViewWorkout() {
-  const [workoutExercises, setWorkoutExercises] = useState<any[] | null>(null);
+  const params = useParams();
+  const workoutId = params.id as string;
+  const [workout, setWorkout] = useState<any | null>(null);
+  const [workoutExercises, setWorkoutExercises] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
-    // TODO: Fetch existing workout names and check for duplicates
-  }, []);
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [workoutData, exercisesData] = await Promise.all([
+          getWorkoutData(supabase, workoutId),
+          getWorkoutExercises(supabase, workoutId),
+        ]);
+        setWorkout(workoutData);
+        setWorkoutExercises(exercisesData);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to fetch workout details");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [workoutId]);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
+  if (!workout) return <div>Workout not found</div>;
 
   return (
     <>
-      <PageTitle title="New Workout" />
-      <div className="bg-creamyBeige p-4 rounded-lg">
-        Choose from our existing exercises or create your own.
+      <PageTitle title={workout.name} />
+      <BackButton url="/protected/workouts" />
+      <Button
+        color="primary"
+        as={Link}
+        href={`/protected/workouts/${workoutId}/session`}
+        className="bg-green-600"
+      >
+        Start Workout
+      </Button>
+      <div className="bg-creamyBeige p-4 rounded-lg mb-4">
+        <h2 className="font-bold mb-2">Description</h2>
+        <p>{workout.description}</p>
+        <p className="text-sm text-gray-600 mt-2">
+          Created: {new Date(workout.created_at).toLocaleDateString()}
+        </p>
       </div>
-      <Button color="primary">Add Exercise</Button>
-      <Table aria-label="Example static collection table">
+
+      <h2 className="text-xl font-bold">Exercises</h2>
+
+      <Table aria-label="Workout exercises">
         <TableHeader>
           <TableColumn>NAME</TableColumn>
-          <TableColumn>ACTIONS</TableColumn>
+          <TableColumn>SETS</TableColumn>
+          <TableColumn>REPS</TableColumn>
+          <TableColumn>WEIGHT</TableColumn>
         </TableHeader>
         <TableBody>
-          <TableRow>
-            <TableCell>Exericse 1</TableCell>
-            <TableCell>Exericse 1</TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>Exericse 2</TableCell>
-            <TableCell>Exericse 1</TableCell>
-          </TableRow>
+          {workoutExercises.map((workoutExercise) => (
+            <TableRow key={workoutExercise.id}>
+              <TableCell>{workoutExercise.exercise.name}</TableCell>
+              <TableCell>{workoutExercise.sets}</TableCell>
+              <TableCell>{workoutExercise.reps}</TableCell>
+              <TableCell>{workoutExercise.weight}</TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </>
