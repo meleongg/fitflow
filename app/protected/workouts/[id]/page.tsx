@@ -82,14 +82,23 @@ export default function ViewWorkout() {
     <>
       <PageTitle title={workout.name} />
       <BackButton url="/protected/workouts" />
-      <Button
-        color="primary"
-        as={Link}
-        href={`/protected/workouts/${workoutId}/session`}
-        className="bg-green-600"
-      >
-        Start Workout
-      </Button>
+      <div className="flex gap-4 mb-4">
+        <Button
+          color="primary"
+          as={Link}
+          href={`/protected/workouts/${workoutId}/edit`}
+        >
+          Edit Workout
+        </Button>
+        <Button
+          color="primary"
+          as={Link}
+          href={`/protected/workouts/${workoutId}/session`}
+          className="bg-green-600"
+        >
+          Start Workout
+        </Button>
+      </div>
       <div className="bg-creamyBeige p-4 rounded-lg mb-4">
         <h2 className="font-bold mb-2">Description</h2>
         <p>{workout.description}</p>
