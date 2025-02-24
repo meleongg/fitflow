@@ -82,14 +82,24 @@ interface SessionExercise {
   }[];
 }
 
-// 1. First, create a utility function for consistent date formatting
+// Format date consistently for both server and client
 const formatDate = (dateString: string) => {
-  // Use a fixed locale and options to ensure consistency
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const date = new Date(dateString);
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 };
 
 export default function WorkoutSession() {

@@ -79,7 +79,7 @@ export default function ViewSession() {
   return (
     <>
       <PageTitle title={`Session for ${session.workout.name}`} />
-      <BackButton url="/protected/sessions" />
+      <BackButton url={`/protected/workouts/${session.workout.id}`} />
 
       <div className="bg-creamyBeige p-4 rounded-lg mb-4">
         <h2 className="font-bold mb-2">Session Details</h2>
@@ -92,6 +92,7 @@ export default function ViewSession() {
                 new Date(session.started_at).getTime()) /
                 (1000 * 60)
             )}
+          {" minutes"}
         </p>
       </div>
 
