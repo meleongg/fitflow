@@ -1,4 +1,5 @@
 import { Geist } from "next/font/google";
+import Head from "next/head";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -10,6 +11,19 @@ export const metadata = {
   metadataBase: new URL(defaultUrl),
   title: "Fitflow",
   description: "The fastest way to add order to your workouts",
+  generator: "Next.js",
+  manifest: "/manifest.json",
+  keywords: ["nextjs", "next14", "pwa", "next-pwa"],
+  icons: [
+    {
+      rel: "apple-touch-icon",
+      url: "web-app-manifest-192x192.png",
+    },
+    {
+      rel: "icon",
+      url: "web-app-manifest-192x192.png",
+    },
+  ],
 };
 
 const geistSans = Geist({
@@ -24,6 +38,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
+      <Head>
+        <meta name="apple-mobile-web-app-title" content="Fitflow" />
+      </Head>
       <body className="bg-background text-foreground">
         <Providers>
           <main className="min-h-screen flex flex-col">{children}</main>
