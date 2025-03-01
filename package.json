@@ -3,7 +3,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "clean-pwa": "rm -rf .next public/sw.js public/workbox-*.js",
+    "pwa-dev": "npm run clean-pwa && npm run build && npm run start"
   },
   "dependencies": {
     "@nextui-org/react": "^2.6.10",
