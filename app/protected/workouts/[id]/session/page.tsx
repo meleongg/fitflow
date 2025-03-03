@@ -3,6 +3,9 @@
 import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
 import Timer from "@/components/ui/timer";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { db } from "@/utils/indexedDB";
+import { OfflineWorkoutSession } from "@/utils/indexedDB";
 import { createClient } from "@/utils/supabase/client";
 import {
   Button,
@@ -131,6 +134,8 @@ export default function WorkoutSession() {
   const [sessionExercises, setSessionExercises] = useState<SessionExercise[]>(
     []
   );
+
+  const isOnline = useOnlineStatus();
 
   // Fetch paginated exercises
   const fetchExercises = async (page: number) => {
@@ -290,65 +295,87 @@ export default function WorkoutSession() {
 
   const onSessionSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isOnline) {
+      setSubmitted(true);
+      try {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
 
-    setSubmitted(true);
-    try {
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
+        if (authError || !user) {
+          throw new Error("Not authenticated");
+        }
 
-      if (authError || !user) {
-        throw new Error("Not authenticated");
+        const now = new Date().toISOString();
+
+        // Create session record
+        const { data: session, error: sessionError } = await supabase
+          .from("sessions")
+          .insert({
+            user_id: user.id,
+            workout_id: workoutId,
+            started_at: now,
+            ended_at: now,
+          })
+          .select()
+          .single();
+
+        if (sessionError || !session) {
+          throw new Error("Failed to create session");
+        }
+
+        // Filter out uncompleted sets and format data
+        const sessionExercisesData = sessionExercises.flatMap((exercise) =>
+          exercise.actualSets
+            .filter((set) => set.completed) // Only include completed sets
+            .map((set) => ({
+              user_id: user.id,
+              session_id: session.id,
+              exercise_id: exercise.id,
+              set_number: set.setNumber,
+              reps: parseInt(set.reps.toString()), // Ensure numbers
+              weight: parseFloat(set.weight.toString()), // Ensure numbers
+            }))
+        );
+
+        const { error: exercisesError } = await supabase
+          .from("session_exercises")
+          .insert(sessionExercisesData);
+
+        if (exercisesError) {
+          console.error("Exercise insertion error:", exercisesError);
+          throw new Error("Failed to save session exercises");
+        }
+
+        // Success - redirect to session summary
+        router.push(`/protected/sessions/${session.id}`);
+      } catch (error: any) {
+        console.error("Error completing session:", error);
+        // TODO: Show error toast
+        setSubmitted(false);
       }
-
+    } else {
       const now = new Date().toISOString();
 
-      // Create session record
-      const { data: session, error: sessionError } = await supabase
-        .from("sessions")
-        .insert({
-          user_id: user.id,
-          workout_id: workoutId,
-          started_at: now,
-          ended_at: now,
-        })
-        .select()
-        .single();
+      // Format session data for offline storage
+      const offlineSession: OfflineWorkoutSession = {
+        workout_id: workoutId,
+        started_at: now,
+        ended_at: now,
+        exercises: sessionExercises.map((exercise) => ({
+          exercise_id: exercise.id,
+          sets: exercise.actualSets.map((set) => ({
+            reps: parseInt(set.reps.toString()),
+            weight: parseFloat(set.weight.toString()),
+            completed: set.completed,
+          })),
+        })),
+        synced: false,
+      };
 
-      if (sessionError || !session) {
-        throw new Error("Failed to create session");
-      }
-
-      // Filter out uncompleted sets and format data
-      const sessionExercisesData = sessionExercises.flatMap((exercise) =>
-        exercise.actualSets
-          .filter((set) => set.completed) // Only include completed sets
-          .map((set) => ({
-            user_id: user.id,
-            session_id: session.id,
-            exercise_id: exercise.id,
-            set_number: set.setNumber,
-            reps: parseInt(set.reps.toString()), // Ensure numbers
-            weight: parseFloat(set.weight.toString()), // Ensure numbers
-          }))
-      );
-
-      const { error: exercisesError } = await supabase
-        .from("session_exercises")
-        .insert(sessionExercisesData);
-
-      if (exercisesError) {
-        console.error("Exercise insertion error:", exercisesError);
-        throw new Error("Failed to save session exercises");
-      }
-
-      // Success - redirect to session summary
-      router.push(`/protected/sessions/${session.id}`);
-    } catch (error: any) {
-      console.error("Error completing session:", error);
-      // TODO: Show error toast
-      setSubmitted(false);
+      await db.saveWorkoutSession(offlineSession);
+      alert("Workout saved offline. Will sync when online.");
     }
   };
 
@@ -641,6 +668,12 @@ export default function WorkoutSession() {
           </div>
         </div>
       </Form>
+      {!isOnline && (
+        <div className="bg-yellow-100 p-4 rounded-md mb-4">
+          You're offline. Your workout will be saved locally and synced when
+          back online.
+        </div>
+      )}
     </>
   );
 }
