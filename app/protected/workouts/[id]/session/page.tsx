@@ -2,10 +2,9 @@
 
 import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
-import Timer from "@/components/ui/timer";
+import Timer, { TIMER_STORAGE_KEY } from "@/components/ui/timer";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { db } from "@/utils/indexedDB";
-import { OfflineWorkoutSession } from "@/utils/indexedDB";
+import { db, OfflineWorkoutSession } from "@/utils/indexedDB";
 import { createClient } from "@/utils/supabase/client";
 import {
   Button,
@@ -136,6 +135,14 @@ export default function WorkoutSession() {
   );
 
   const isOnline = useOnlineStatus();
+
+  const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sessionStartTime) {
+      setSessionStartTime(new Date().toISOString());
+    }
+  }, []);
 
   // Fetch paginated exercises
   const fetchExercises = async (page: number) => {
@@ -295,6 +302,8 @@ export default function WorkoutSession() {
 
   const onSessionSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const endTime = new Date().toISOString();
+
     if (isOnline) {
       setSubmitted(true);
       try {
@@ -307,16 +316,14 @@ export default function WorkoutSession() {
           throw new Error("Not authenticated");
         }
 
-        const now = new Date().toISOString();
-
-        // Create session record
+        // Use sessionStartTime instead of 'now'
         const { data: session, error: sessionError } = await supabase
           .from("sessions")
           .insert({
             user_id: user.id,
             workout_id: workoutId,
-            started_at: now,
-            ended_at: now,
+            started_at: sessionStartTime, // Use the stored start time
+            ended_at: endTime, // Use the current time as end time
           })
           .select()
           .single();
@@ -356,13 +363,11 @@ export default function WorkoutSession() {
         setSubmitted(false);
       }
     } else {
-      const now = new Date().toISOString();
-
-      // Format session data for offline storage
+      // For offline storage
       const offlineSession: OfflineWorkoutSession = {
         workout_id: workoutId,
-        started_at: now,
-        ended_at: now,
+        started_at: sessionStartTime!, // Use the stored start time
+        ended_at: endTime, // Use the current time as end time
         exercises: sessionExercises.map((exercise) => ({
           exercise_id: exercise.id,
           sets: exercise.actualSets.map((set) => ({
@@ -377,6 +382,9 @@ export default function WorkoutSession() {
       await db.saveWorkoutSession(offlineSession);
       alert("Workout saved offline. Will sync when online.");
     }
+
+    // Clear timer state after workout completion
+    localStorage.removeItem(TIMER_STORAGE_KEY);
   };
 
   // Add this function with the other handlers
