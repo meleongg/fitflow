@@ -7,7 +7,7 @@ export default function Hero() {
       <h1 className="text-4xl font-bold mb-4">Welcome to FitFlow</h1>
       <p className="text-lg mb-8 text-center max-w-md">
         Your ultimate workout library app. Track your sessions, analyze your
-        progress, and stay motivated. HELLO WORLD
+        progress, and stay motivated.
       </p>
       <div className="bg-creamyBeige w-full h-64 mb-8 flex items-center justify-center">
         {/* Placeholder for screenshots */}
