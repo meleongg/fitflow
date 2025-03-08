@@ -79,7 +79,7 @@ export default function ViewSession() {
   return (
     <>
       <PageTitle title={`Session for ${session.workout.name}`} />
-      <BackButton url={`/protected/workouts/${session.workout.id}`} />
+      <BackButton url={`/protected/sessions`} />
 
       <div className="bg-creamyBeige p-4 rounded-lg mb-4">
         <h2 className="font-bold mb-2">Session Details</h2>
