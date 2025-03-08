@@ -3,6 +3,7 @@
 import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
 import Timer, { TIMER_STORAGE_KEY } from "@/components/ui/timer";
+import { useSession } from "@/contexts/SessionContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { db, OfflineWorkoutSession } from "@/utils/indexedDB";
 import { createClient } from "@/utils/supabase/client";
@@ -138,11 +139,53 @@ export default function WorkoutSession() {
 
   const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
 
+  const { activeSession, startSession, updateSessionProgress, endSession } =
+    useSession();
+
+  const [user, setUser] = useState<any>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Fetch user data on component mount
   useEffect(() => {
-    if (!sessionStartTime) {
-      setSessionStartTime(new Date().toISOString());
-    }
+    const fetchUser = async () => {
+      try {
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error) {
+          setAuthError(error.message);
+          return;
+        }
+
+        if (!user) {
+          setAuthError("Not authenticated");
+          return;
+        }
+
+        setUser(user);
+      } catch (error: any) {
+        console.error("Error fetching user:", error);
+        setAuthError("Authentication failed");
+      }
+    };
+
+    fetchUser();
   }, []);
+
+  // Start session when page loads
+  useEffect(() => {
+    if (!activeSession && workout && user) {
+      setSessionStartTime(new Date().toISOString());
+      startSession({
+        user_id: user.id,
+        workout_id: workoutId,
+        workout_name: workout.name,
+        started_at: sessionStartTime!,
+      });
+    }
+  }, [workout, user, activeSession]);
 
   // Fetch paginated exercises
   const fetchExercises = async (page: number) => {
@@ -220,25 +263,31 @@ export default function WorkoutSession() {
     fetchData();
   }, [workoutId]);
 
+  // Modify your exercise initialization effect
   useEffect(() => {
     if (workoutExercises.length > 0) {
-      setSessionExercises(
-        workoutExercises.map((exercise) => ({
-          id: exercise.id,
-          name: exercise.name,
-          targetSets: exercise.sets,
-          targetReps: exercise.reps,
-          targetWeight: exercise.weight,
-          actualSets: Array.from({ length: exercise.sets }, (_, i) => ({
-            setNumber: i + 1,
-            reps: 0,
-            weight: 0,
-            completed: false,
-          })),
-        }))
-      );
+      // Check for existing progress
+      if (activeSession?.progress?.exercises) {
+        setSessionExercises(activeSession.progress.exercises);
+      } else {
+        setSessionExercises(
+          workoutExercises.map((exercise) => ({
+            id: exercise.id,
+            name: exercise.name,
+            targetSets: exercise.sets,
+            targetReps: exercise.reps,
+            targetWeight: exercise.weight,
+            actualSets: Array.from({ length: exercise.sets }, (_, i) => ({
+              setNumber: i + 1,
+              reps: 0,
+              weight: 0,
+              completed: false,
+            })),
+          }))
+        );
+      }
     }
-  }, [workoutExercises]);
+  }, [workoutExercises, activeSession]);
 
   const handleCustomExerciseSubmit = async (
     e: React.FormEvent<HTMLFormElement>
@@ -304,15 +353,13 @@ export default function WorkoutSession() {
     e.preventDefault();
     const endTime = new Date().toISOString();
 
+    // End the global session
+    endSession();
+
     if (isOnline) {
       setSubmitted(true);
       try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) {
+        if (!user) {
           throw new Error("Not authenticated");
         }
 
@@ -393,6 +440,30 @@ export default function WorkoutSession() {
       prev.filter((_, index) => index !== exerciseIndex)
     );
   };
+
+  // Add this to your component
+  useEffect(() => {
+    if (activeSession && sessionExercises.length > 0) {
+      // Update session with current progress
+      updateSessionProgress(sessionExercises);
+    }
+  }, [sessionExercises]);
+
+  if (authError) {
+    return (
+      <div className="p-8">
+        <h2 className="text-xl font-bold text-red-500">Authentication Error</h2>
+        <p className="mt-2">{authError}</p>
+        <Button
+          color="primary"
+          className="mt-4"
+          onPress={() => router.push("/login")}
+        >
+          Go to Login
+        </Button>
+      </div>
+    );
+  }
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
@@ -673,6 +744,8 @@ export default function WorkoutSession() {
                 Complete Workout
               </Button>
             </div>
+
+            {/* TODO: add cancel workout button & add to session context */}
           </div>
         </div>
       </Form>
