@@ -1,7 +1,9 @@
 "use client";
 
+import ActiveSessionBanner from "@/components/active-session-banner";
 import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
+import { useSession } from "@/contexts/SessionContext";
 import { createClient } from "@/utils/supabase/client";
 import {
   Button,
@@ -13,7 +15,7 @@ import {
   TableRow,
 } from "@nextui-org/react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 // Fetch workout data
@@ -45,6 +47,7 @@ const getWorkoutExercises = async (supabase: any, workoutId: string) => {
 };
 
 export default function ViewWorkout() {
+  const router = useRouter();
   const params = useParams();
   const workoutId = params.id as string;
   const [workout, setWorkout] = useState<any | null>(null);
@@ -52,6 +55,8 @@ export default function ViewWorkout() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
+  const { activeSession } = useSession();
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,6 +85,7 @@ export default function ViewWorkout() {
 
   return (
     <>
+      <ActiveSessionBanner />
       <PageTitle title={workout.name} />
       <BackButton url="/protected/workouts" />
       <div className="flex gap-4 mb-4">
@@ -91,10 +97,14 @@ export default function ViewWorkout() {
           Edit Workout
         </Button>
         <Button
-          color="primary"
-          as={Link}
           href={`/protected/workouts/${workoutId}/session`}
-          className="bg-green-600"
+          onPress={() => {
+            if (activeSession?.workoutId) {
+              setShowSessionWarning(true);
+            } else {
+              router.push(`/protected/workouts/${workoutId}/session`);
+            }
+          }}
         >
           Start Workout
         </Button>
@@ -127,6 +137,35 @@ export default function ViewWorkout() {
           ))}
         </TableBody>
       </Table>
+
+      {showSessionWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg max-w-md">
+            <h3 className="text-xl font-bold mb-2">
+              Active Session in Progress
+            </h3>
+            <p className="mb-4">
+              You already have an active workout session for "
+              {activeSession?.workoutName}". Please complete or end that session
+              before starting a new one.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowSessionWarning(false)}
+                className="px-4 py-2 border rounded"
+              >
+                Close
+              </button>
+              <Link
+                href={`/protected/workouts/${activeSession?.workoutId}/session`}
+                className="bg-primary text-white px-4 py-2 rounded"
+              >
+                Return to Session
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

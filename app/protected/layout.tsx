@@ -7,7 +7,7 @@ export default async function Layout({
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="w-full flex flex-col flex-1 gap-6 items-start py-8 px-8">
+      <div className="w-full flex flex-col flex-1 gap-6 py-8 px-8">
         {children}
       </div>
       <footer className="sticky bottom-0 w-full">

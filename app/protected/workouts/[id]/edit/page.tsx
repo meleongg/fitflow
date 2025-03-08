@@ -1,5 +1,6 @@
 "use client";
 
+import ActiveSessionBanner from "@/components/active-session-banner";
 import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
 import { createClient } from "@/utils/supabase/client";
@@ -340,6 +341,7 @@ export default function EditWorkout() {
 
   return (
     <>
+      <ActiveSessionBanner />
       <PageTitle title={workout.name} />
       <BackButton url="/protected/workouts" />
 

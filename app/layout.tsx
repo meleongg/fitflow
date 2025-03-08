@@ -1,3 +1,4 @@
+import { SessionProvider } from "@/contexts/SessionContext";
 import { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
@@ -53,7 +54,9 @@ export default function RootLayout({
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
       <body className="bg-background text-foreground">
         <Providers>
-          <main className="min-h-screen flex flex-col">{children}</main>
+          <SessionProvider>
+            <main className="min-h-screen flex flex-col">{children}</main>
+          </SessionProvider>
         </Providers>
       </body>
     </html>
