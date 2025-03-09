@@ -51,7 +51,7 @@ export default function Navbar() {
           <Button
             isIconOnly
             as={Link}
-            href="/protected/exercises"
+            href="/protected/analytics"
             color="primary"
           >
             <ChartLine />
