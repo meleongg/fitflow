@@ -1,6 +1,7 @@
 import { Button } from "@nextui-org/react";
-import { LogOut, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import Link from "next/link";
+import LogoutButton from "./logout-button";
 
 export default function PageTitle({ title }: { title: string }) {
   return (
@@ -10,9 +11,7 @@ export default function PageTitle({ title }: { title: string }) {
         <Button isIconOnly as={Link} href="/protected/settings" color="primary">
           <Settings />
         </Button>
-        <Button isIconOnly as={Link} href="/protected/log-out" color="primary">
-          <LogOut />
-        </Button>
+        <LogoutButton />
       </div>
     </div>
   );
