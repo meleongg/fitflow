@@ -55,7 +55,9 @@ export default function RootLayout({
       <body className="bg-background text-foreground">
         <Providers>
           <SessionProvider>
-            <main className="min-h-screen flex flex-col">{children}</main>
+            <main className="min-h-screen flex flex-col justify-center align-centre">
+              {children}
+            </main>
           </SessionProvider>
         </Providers>
       </body>
