@@ -2,6 +2,7 @@
 
 import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
+import RestTimer from "@/components/ui/rest-timer";
 import Timer, { TIMER_STORAGE_KEY } from "@/components/ui/timer";
 import { useSession } from "@/contexts/SessionContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -150,6 +151,11 @@ export default function WorkoutSession() {
 
   // Add this near your other hooks
   const { useMetric, isLoading: loadingPreferences } = useUnitPreference();
+
+  // Add these state variables with your other state
+  const [timerKey, setTimerKey] = useState(0);
+  const [showRestTimer, setShowRestTimer] = useState(false);
+  const [restDuration, setRestDuration] = useState(90); // Default 90 seconds
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -455,6 +461,23 @@ export default function WorkoutSession() {
     }
   }, [sessionExercises]);
 
+  // Add this helper function
+  const fetchUserRestTimerDuration = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("user_preferences")
+        .select("default_rest_timer")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (error) throw error;
+      return data?.default_rest_timer || 90;
+    } catch (err) {
+      console.error("Error fetching rest duration:", err);
+      return 90; // Default fallback
+    }
+  };
+
   if (authError) {
     return (
       <div className="p-8">
@@ -713,19 +736,39 @@ export default function WorkoutSession() {
                           />
                         </TableCell>
                         <TableCell>
-                          <Button
-                            color={set.completed ? "success" : "primary"}
-                            size="sm"
-                            onPress={() => {
-                              const newExercises = [...sessionExercises];
-                              newExercises[exerciseIndex].actualSets[
-                                setIndex
-                              ].completed = !set.completed;
-                              setSessionExercises(newExercises);
-                            }}
-                          >
-                            {set.completed ? "Completed" : "Mark Complete"}
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              color={set.completed ? "success" : "primary"}
+                              size="sm"
+                              onPress={() => {
+                                // Determine what the new completion state will be (opposite of current)
+                                const willBeCompleted = !set.completed;
+
+                                // Update the state with the new value
+                                const newExercises = [...sessionExercises];
+                                newExercises[exerciseIndex].actualSets[
+                                  setIndex
+                                ].completed = willBeCompleted;
+                                setSessionExercises(newExercises);
+
+                                // Only show rest timer if we're marking the set as completed
+                                if (willBeCompleted) {
+                                  // Force a new timer instance by updating the key
+                                  setTimerKey((prev) => prev + 1);
+                                  setShowRestTimer(true);
+
+                                  // Optional: Fetch user's rest timer preference
+                                  fetchUserRestTimerDuration().then(
+                                    (duration) => {
+                                      if (duration) setRestDuration(duration);
+                                    }
+                                  );
+                                }
+                              }}
+                            >
+                              {set.completed ? "Completed" : "Mark Complete"}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -805,6 +848,13 @@ export default function WorkoutSession() {
           You're offline. Your workout will be saved locally and synced when
           back online.
         </div>
+      )}
+      {showRestTimer && (
+        <RestTimer
+          key={timerKey}
+          defaultSeconds={restDuration}
+          onComplete={() => setShowRestTimer(false)}
+        />
       )}
     </>
   );
