@@ -686,12 +686,12 @@ export default function WorkoutSession() {
 
                 <Table aria-label={`${exercise.name} sets`}>
                   <TableHeader>
-                    <TableColumn>SET</TableColumn>
-                    <TableColumn>REPS</TableColumn>
-                    <TableColumn>
+                    <TableColumn width={100}>SET</TableColumn>
+                    <TableColumn width={100}>REPS</TableColumn>
+                    <TableColumn width={150}>
                       WEIGHT ({useMetric ? "KG" : "LBS"})
                     </TableColumn>
-                    <TableColumn>STATUS</TableColumn>
+                    <TableColumn width={150}>STATUS</TableColumn>
                   </TableHeader>
                   <TableBody>
                     {exercise.actualSets.map((set, setIndex) => (
@@ -740,6 +740,7 @@ export default function WorkoutSession() {
                             <Button
                               color={set.completed ? "success" : "primary"}
                               size="sm"
+                              className="w-32 min-w-[128px]" // Fixed width that fits both text options
                               onPress={() => {
                                 // Determine what the new completion state will be (opposite of current)
                                 const willBeCompleted = !set.completed;

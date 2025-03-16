@@ -137,6 +137,7 @@ export default function RestTimer({
     }
   }, [defaultSeconds]);
 
+  // Fix the timer interval implementation
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -146,10 +147,14 @@ export default function RestTimer({
           if (prev <= 1) {
             clearInterval(interval);
             setIsRunning(false);
-            if (onComplete) onComplete();
 
-            // Send notification instead of playing sound
+            // Send notification
             sendNotification();
+
+            // Schedule the callback separately to avoid render phase updates
+            setTimeout(() => {
+              if (onComplete) onComplete();
+            }, 0);
 
             return 0;
           }
@@ -159,7 +164,7 @@ export default function RestTimer({
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, seconds, onComplete, notificationsEnabled]);
+  }, [isRunning, seconds, notificationsEnabled]);
 
   const resetTimer = () => {
     // Reset to either provided defaultSeconds or the fetched user preference
