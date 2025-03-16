@@ -139,18 +139,12 @@ export default function WorkoutsPage() {
 
       <PageTitle title="Workouts" />
 
-      <div className="bg-creamyBeige p-5 rounded-lg shadow-sm">
-        <p className="text-sm">
-          This is the workout library. Create workouts or start sessions!
-        </p>
-      </div>
-
       <div className="flex justify-between items-center">
         <Button
           as={Link}
           href="/protected/workouts/create-workout"
           color="primary"
-          className="mb-4"
+          className="mb-4 dark:text-white"
         >
           Create Workout
         </Button>

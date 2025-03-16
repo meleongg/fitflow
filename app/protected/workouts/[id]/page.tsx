@@ -111,7 +111,7 @@ export default function ViewWorkout() {
           Start Workout
         </Button>
       </div>
-      <div className="bg-creamyBeige p-4 rounded-lg mb-4">
+      <div className="bg-creamyBeige dark:bg-creamyBeige-dark p-4 rounded-lg mb-4">
         <h2 className="font-bold mb-2">Description</h2>
         <p>{workout.description}</p>
         <p className="text-sm text-gray-600 mt-2">

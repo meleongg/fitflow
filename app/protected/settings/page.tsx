@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "@/components/theme-provider";
 import PageTitle from "@/components/ui/page-title";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -59,6 +60,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
+  const { theme, setTheme } = useTheme();
 
   // Form states
   const [newEmail, setNewEmail] = useState("");
@@ -94,7 +96,7 @@ export default function SettingsPage() {
       if (prefsData) {
         setPreferences({
           useMetric: prefsData.use_metric,
-          useDarkMode: prefsData.use_dark_mode,
+          useDarkMode: theme === "dark", // Match the current theme
           enableNotifications: prefsData.enable_notifications,
           defaultRestTimer: prefsData.default_rest_timer,
           enableSounds: prefsData.enable_sounds,
@@ -116,7 +118,7 @@ export default function SettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     fetchUserData();
@@ -126,6 +128,9 @@ export default function SettingsPage() {
   const savePreferences = async () => {
     try {
       setIsSaving(true);
+
+      // Apply theme change globally
+      setTheme(preferences.useDarkMode ? "dark" : "light");
 
       const { error } = await supabase
         .from("user_preferences")
@@ -141,13 +146,6 @@ export default function SettingsPage() {
       if (error) throw error;
 
       toast.success("Preferences saved successfully");
-
-      // Apply dark mode if changed
-      if (preferences.useDarkMode) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
     } catch (error) {
       console.error("Error saving preferences:", error);
       toast.error("Failed to save preferences");
@@ -536,9 +534,12 @@ export default function SettingsPage() {
                   startContent={<Sun size={18} />}
                   endContent={<Moon size={18} />}
                   isSelected={preferences.useDarkMode}
-                  onValueChange={(isSelected) =>
-                    setPreferences({ ...preferences, useDarkMode: isSelected })
-                  }
+                  onValueChange={(isSelected) => {
+                    // Apply theme change immediately
+                    setTheme(isSelected ? "dark" : "light");
+                    // Then update preferences state
+                    setPreferences({ ...preferences, useDarkMode: isSelected });
+                  }}
                 />
               </div>
             </CardBody>

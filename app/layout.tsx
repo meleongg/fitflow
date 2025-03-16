@@ -1,6 +1,9 @@
+import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "@/contexts/SessionContext";
+import { NextUIProvider } from "@nextui-org/react";
 import { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -18,8 +21,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "FitFlow",
-  description: "The fastest way to add order to your workouts",
+  title: "FitFlow - Fitness Tracking App",
+  description: "Track your workouts and fitness progress",
   manifest: "/manifest.json",
   keywords: ["nextjs", "next14", "pwa", "next-pwa"],
   applicationName: "FitFlow",
@@ -45,21 +48,28 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
+const inter = Inter({ subsets: ["latin"] });
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={geistSans.className} suppressHydrationWarning>
-      <body className="bg-background text-foreground">
-        <Providers>
-          <SessionProvider>
-            <main className="min-h-screen flex flex-col justify-center align-centre">
-              {children}
-            </main>
-          </SessionProvider>
-        </Providers>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider>
+          <NextUIProvider>
+            <Providers>
+              <SessionProvider>
+                <main className="min-h-screen flex flex-col justify-center align-centre">
+                  {children}
+                </main>
+              </SessionProvider>
+            </Providers>
+            <Toaster position="top-center" richColors />
+          </NextUIProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
