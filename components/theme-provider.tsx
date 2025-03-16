@@ -19,16 +19,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setTheme] = useState<string>("light");
 
   useEffect(() => {
-    // Check localStorage on mount
+    // Only check localStorage on mount, don't check system preference
     const storedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
 
     if (storedTheme) {
       setTheme(storedTheme);
-    } else if (prefersDark) {
-      setTheme("dark");
     }
   }, []);
 
