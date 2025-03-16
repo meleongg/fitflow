@@ -2,7 +2,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "@/contexts/SessionContext";
 import { NextUIProvider } from "@nextui-org/react";
 import { Metadata, Viewport } from "next";
-import { Geist, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -42,13 +41,6 @@ export const metadata: Metadata = {
     apple: [{ url: "/icons/icon-192x192.png" }],
   },
 };
-
-const geistSans = Geist({
-  display: "swap",
-  subsets: ["latin"],
-});
-
-const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
