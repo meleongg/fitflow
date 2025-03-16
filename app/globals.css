@@ -5,12 +5,12 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
+    --primary: 0 0% 20%; /* This makes it a dark gray/near-black */
     --primary-foreground: 0 0% 98%;
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 0 0% 9%;
@@ -32,13 +32,13 @@
   }
 
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
+    --background: 0 0% 9%; /* HSL format for dark gray/black */
+    --foreground: 0 0% 98%; /* Almost white text */
+    --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
+    --primary: 0 0% 20%;
     --primary-foreground: 0 0% 9%;
     --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
@@ -56,6 +56,13 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    /* Button specific colors */
+    --button-text: 255 255 255;
+    --button-bg-hover: 75 75 75;
+
+    /* Light backgrounds need dark variants */
+    --light-bg-dark-variant: 50 50 50;
   }
 }
 
@@ -79,4 +86,28 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+}
+
+/* Add this to fix the content flicker when changing themes */
+.transition-colors {
+  transition-property: background-color, color, border-color,
+    text-decoration-color, fill, stroke;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Add this to your globals.css */
+.dark button,
+.dark .nextui-button {
+  --nextui-color-primary-foreground: 255 255 255;
+  color: white;
+}
+
+/* Then you can use these as utility classes */
+.bg-light-component {
+  @apply bg-creamyBeige dark:bg-gray-800;
+}
+
+.text-subdued {
+  @apply text-gray-600 dark:text-gray-300;
 }

@@ -22,7 +22,10 @@ const config = {
     extend: {
       colors: {
         oatBrown: "#D2B48C",
-        creamyBeige: "#F5F5DC",
+        creamyBeige: {
+          DEFAULT: "#F5F5DC",
+          dark: "#3A3A3A", // Dark variant
+        },
         black: "#333333",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
