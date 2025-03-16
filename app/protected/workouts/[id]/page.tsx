@@ -7,6 +7,7 @@ import { useSession } from "@/contexts/SessionContext";
 import { createClient } from "@/utils/supabase/client";
 import {
   Button,
+  Spinner,
   Table,
   TableBody,
   TableCell,
@@ -79,7 +80,13 @@ export default function ViewWorkout() {
     fetchData();
   }, [workoutId]);
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="p-4 flex justify-center items-center h-64">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
   if (error) return <div className="text-red-500">{error}</div>;
   if (!workout) return <div>Workout not found</div>;
 

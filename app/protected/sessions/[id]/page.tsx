@@ -4,6 +4,7 @@ import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
 import { createClient } from "@/utils/supabase/client";
 import {
+  Spinner,
   Table,
   TableBody,
   TableCell,
@@ -72,7 +73,13 @@ export default function ViewSession() {
     fetchData();
   }, [sessionId]);
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="p-4 flex justify-center items-center h-64">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
   if (error) return <div className="text-red-500">{error}</div>;
   if (!session) return <div>Session not found</div>;
 
