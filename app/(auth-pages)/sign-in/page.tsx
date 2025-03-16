@@ -3,8 +3,8 @@ import { FormMessage, Message } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
 import { Dumbbell } from "lucide-react";
+import Link from "next/link";
 
 export default async function Login(props: { searchParams: Promise<Message> }) {
   const searchParams = await props.searchParams;
@@ -19,7 +19,7 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
               </div>
             </div>
             <h1 className="text-2xl font-bold">Welcome back</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-700 mt-1">
               Sign in to continue to FitFlow
             </p>
           </div>
@@ -73,7 +73,7 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
           </form>
 
           <div className="text-center mt-6">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-700">
               Don't have an account?{" "}
               <Link
                 className="text-primary font-medium hover:underline"

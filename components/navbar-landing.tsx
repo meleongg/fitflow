@@ -10,16 +10,16 @@ import Link from "next/link";
 
 export default function NavbarLanding() {
   return (
-    <Navbar className="bg-oatBrown justify-space-between">
+    <Navbar className="bg-white shadow-sm justify-space-between">
       <NavbarBrand>
         <Link href="/" passHref>
-          <NextUILink className="font-bold">FitFlow</NextUILink>
+          <NextUILink className="font-bold text-gray-900">FitFlow</NextUILink>
         </Link>
       </NavbarBrand>
       <NavbarContent justify="end">
         <NavbarItem>
           <Link href="/sign-in" passHref>
-            <Button as={NextUILink} color="primary">
+            <Button as={NextUILink} color="primary" variant="flat">
               Sign In
             </Button>
           </Link>

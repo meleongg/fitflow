@@ -50,7 +50,7 @@ export default async function Home() {
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
             Track Your Fitness Journey with Ease
           </h1>
-          <p className="text-xl text-gray-500 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
             FitFlow helps you track workouts, monitor progress, and achieve your
             fitness goals with a simple, intuitive interface.
           </p>
@@ -74,7 +74,7 @@ export default async function Home() {
         <section id="features" className="max-w-6xl mx-auto py-12">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Everything You Need</h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
+            <p className="text-gray-700 max-w-2xl mx-auto">
               FitFlow provides all the tools you need to track and improve your
               fitness journey
             </p>
@@ -87,7 +87,7 @@ export default async function Home() {
                 <Activity className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-2">Workout Tracking</h3>
-              <p className="text-gray-500">
+              <p className="text-gray-700">
                 Log your exercises, sets, reps, and weights with an intuitive
                 interface designed for the gym.
               </p>
@@ -99,7 +99,7 @@ export default async function Home() {
                 <BarChart2 className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-2">Progress Analytics</h3>
-              <p className="text-gray-500">
+              <p className="text-gray-700">
                 Visualize your progress with detailed charts and metrics to keep
                 you motivated.
               </p>
@@ -111,7 +111,7 @@ export default async function Home() {
                 <Calendar className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-2">Workout Planning</h3>
-              <p className="text-gray-500">
+              <p className="text-gray-700">
                 Create and schedule your workouts in advance to stay consistent
                 with your routine.
               </p>
@@ -123,7 +123,7 @@ export default async function Home() {
                 <CheckCircle className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-2">Exercise Library</h3>
-              <p className="text-gray-500">
+              <p className="text-gray-700">
                 Access a comprehensive library of exercises with instructions
                 and muscle targeting information.
               </p>
@@ -135,7 +135,7 @@ export default async function Home() {
                 <Dumbbell className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-2">Personal Records</h3>
-              <p className="text-gray-500">
+              <p className="text-gray-700">
                 Track your personal bests and celebrate your achievements as you
                 progress.
               </p>
@@ -159,7 +159,7 @@ export default async function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold mb-2">Data Security</h3>
-              <p className="text-gray-500">
+              <p className="text-gray-700">
                 Your fitness data is securely stored and accessible only to you.
               </p>
             </div>
@@ -197,14 +197,14 @@ export default async function Home() {
               <span className="ml-2 text-xl font-bold">FitFlow</span>
             </div>
             <div className="flex flex-col items-center md:items-end">
-              <p className="text-gray-500 text-sm mb-2">
+              <p className="text-gray-700 text-sm mb-2">
                 © 2025 FitFlow. All rights reserved.
               </p>
               <div className="flex gap-4">
-                <a href="#" className="text-gray-500 hover:text-primary">
+                <a href="#" className="text-gray-700 hover:text-primary">
                   Privacy Policy
                 </a>
-                <a href="#" className="text-gray-500 hover:text-primary">
+                <a href="#" className="text-gray-700 hover:text-primary">
                   Terms of Service
                 </a>
               </div>

@@ -39,7 +39,7 @@ export default async function Signup(props: {
               </div>
             </div>
             <h1 className="text-2xl font-bold">Create an account</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-700 mt-1">
               Start your fitness journey with FitFlow
             </p>
           </div>
@@ -72,7 +72,7 @@ export default async function Signup(props: {
                 minLength={6}
                 required
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-700">
                 Password must be at least 6 characters long
               </p>
             </div>
@@ -89,7 +89,7 @@ export default async function Signup(props: {
           </form>
 
           <div className="text-center mt-6">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-700">
               Already have an account?{" "}
               <Link
                 className="text-primary font-medium hover:underline"
