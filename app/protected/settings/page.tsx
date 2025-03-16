@@ -279,7 +279,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-4 pb-20 space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 pb-24 space-y-6 w-full max-w-4xl mx-auto min-w-[320px]">
       <PageTitle title="Settings" />
 
       <Tabs
@@ -289,8 +289,11 @@ export default function SettingsPage() {
         color="primary"
         variant="underlined"
         classNames={{
-          tabList: "gap-6",
+          tabList: "gap-6 w-full",
+          panel: "w-full",
+          base: "w-full",
         }}
+        className="w-full"
       >
         <Tab
           key="account"
@@ -314,7 +317,7 @@ export default function SettingsPage() {
 
       {/* Account Settings */}
       {activeTab === "account" && (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full">
           <Card>
             <CardHeader className="flex flex-col items-start">
               <h3 className="text-lg font-bold">Profile Information</h3>
@@ -487,7 +490,7 @@ export default function SettingsPage() {
 
       {/* Preferences */}
       {activeTab === "preferences" && (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full">
           <Card>
             <CardHeader className="flex flex-col items-start">
               <h3 className="text-lg font-bold">Display Preferences</h3>
@@ -640,6 +643,9 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Add extra spacer at the bottom to handle navbar overlap */}
+      <div className="h-16"></div>
     </div>
   );
 }
