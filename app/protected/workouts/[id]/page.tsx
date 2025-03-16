@@ -102,10 +102,12 @@ export default function ViewWorkout() {
           color="primary"
           as={Link}
           href={`/protected/workouts/${workoutId}/edit`}
+          className="dark:text-white"
         >
           Edit Workout
         </Button>
         <Button
+          color="default"
           href={`/protected/workouts/${workoutId}/session`}
           onPress={() => {
             if (activeSession?.workoutId) {
@@ -114,6 +116,7 @@ export default function ViewWorkout() {
               router.push(`/protected/workouts/${workoutId}/session`);
             }
           }}
+          className="dark:text-foreground"
         >
           Start Workout
         </Button>
@@ -121,7 +124,7 @@ export default function ViewWorkout() {
       <div className="bg-creamyBeige dark:bg-creamyBeige-dark p-4 rounded-lg mb-4">
         <h2 className="font-bold mb-2">Description</h2>
         <p>{workout.description}</p>
-        <p className="text-sm text-gray-600 mt-2">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
           Created: {new Date(workout.created_at).toLocaleDateString()}
         </p>
       </div>

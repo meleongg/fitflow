@@ -61,16 +61,24 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       exercises: any[];
     };
   }) => {
+    // Always use current timestamp for consistency
+    const currentTime = new Date().toISOString();
+
     const newSession: ActiveSession = {
       id: session.user_id,
       workoutId: session.workout_id,
       workoutName: session.workout_name,
-      startTime: session.started_at,
+      // Use current time instead of passed timestamp for consistency
+      startTime: currentTime,
       progress: {
         exercises: session.progress?.exercises ?? [],
       },
     };
 
+    // Clear any existing session first
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+
+    // Set the new session
     setActiveSession(newSession);
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newSession));
   };
@@ -91,9 +99,16 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const endSession = () => {
+    // Clear state
     setActiveSession(null);
+
+    // Clear all related localStorage items
     localStorage.removeItem(SESSION_STORAGE_KEY);
     localStorage.removeItem("workout-timer-state");
+    localStorage.removeItem("fitflow-active-session"); // Add this to ensure all variations are cleared
+
+    // Force a re-render by triggering a state change in the parent components
+    window.dispatchEvent(new Event("storage")); // This triggers storage event listeners
   };
 
   return (

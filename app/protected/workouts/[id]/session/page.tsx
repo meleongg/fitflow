@@ -5,8 +5,10 @@ import PageTitle from "@/components/ui/page-title";
 import Timer, { TIMER_STORAGE_KEY } from "@/components/ui/timer";
 import { useSession } from "@/contexts/SessionContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { db, OfflineWorkoutSession } from "@/utils/indexedDB";
 import { createClient } from "@/utils/supabase/client";
+import { displayWeight, kgToLbs, lbsToKg } from "@/utils/units";
 import {
   Button,
   Form,
@@ -145,6 +147,9 @@ export default function WorkoutSession() {
 
   const [user, setUser] = useState<any>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Add this near your other hooks
+  const { useMetric, isLoading: loadingPreferences } = useUnitPreference();
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -643,7 +648,7 @@ export default function WorkoutSession() {
                   <div className="flex items-center gap-4">
                     <div className="text-sm text-gray-600">
                       Target: {exercise.targetSets} sets × {exercise.targetReps}{" "}
-                      reps @ {exercise.targetWeight}kg
+                      reps @ {displayWeight(exercise.targetWeight, useMetric)}
                     </div>
                     <Button
                       color="danger"
@@ -660,7 +665,9 @@ export default function WorkoutSession() {
                   <TableHeader>
                     <TableColumn>SET</TableColumn>
                     <TableColumn>REPS</TableColumn>
-                    <TableColumn>WEIGHT (KG)</TableColumn>
+                    <TableColumn>
+                      WEIGHT ({useMetric ? "KG" : "LBS"})
+                    </TableColumn>
                     <TableColumn>STATUS</TableColumn>
                   </TableHeader>
                   <TableBody>
@@ -684,13 +691,23 @@ export default function WorkoutSession() {
                         <TableCell>
                           <Input
                             type="number"
-                            value={String(set.weight)}
+                            // If stored in kg, convert to lbs for display when useMetric is false
+                            value={
+                              useMetric
+                                ? String(set.weight)
+                                : String(kgToLbs(set.weight).toFixed(1))
+                            }
                             className="w-20"
                             onChange={(e) => {
                               const newExercises = [...sessionExercises];
+                              // Convert input back to kg for storage if needed
+                              const inputValue = Number(e.target.value);
+                              const storageValue = useMetric
+                                ? inputValue
+                                : lbsToKg(inputValue);
                               newExercises[exerciseIndex].actualSets[
                                 setIndex
-                              ].weight = Number(e.target.value);
+                              ].weight = storageValue;
                               setSessionExercises(newExercises);
                             }}
                           />
@@ -751,6 +768,31 @@ export default function WorkoutSession() {
             <div className="mt-8 flex gap-4">
               <Button color="success" size="lg" type="submit">
                 Complete Workout
+              </Button>
+
+              <Button
+                color="danger"
+                size="lg"
+                variant="flat"
+                onPress={() => {
+                  // Show confirmation dialog
+                  if (
+                    confirm(
+                      "Are you sure you want to cancel this workout? Progress will be lost."
+                    )
+                  ) {
+                    // Clear timer storage
+                    localStorage.removeItem(TIMER_STORAGE_KEY);
+
+                    // End the session context
+                    endSession();
+
+                    // Navigate back to workout library
+                    router.push("/protected/workouts");
+                  }
+                }}
+              >
+                Cancel Workout
               </Button>
             </div>
 

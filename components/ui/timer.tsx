@@ -119,7 +119,7 @@ export default function Timer() {
       <div className="space-x-2">
         <button
           onClick={() => setIsRunning(!isRunning)}
-          className="bg-primary text-white px-4 py-2 rounded"
+          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors"
         >
           {isRunning ? "Pause" : "Start"}
         </button>
@@ -136,7 +136,7 @@ export default function Timer() {
               })
             );
           }}
-          className="bg-secondary text-white px-4 py-2 rounded"
+          className="bg-gray-700 dark:bg-gray-200 text-white dark:text-black px-4 py-2 rounded"
         >
           Reset
         </button>

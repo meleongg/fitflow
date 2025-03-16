@@ -15,29 +15,74 @@ export default function ActiveSessionBanner() {
 
     // Calculate initial elapsed time
     const calculateElapsed = () => {
-      const startTime = new Date(activeSession.startTime);
-      const currentTime = new Date();
-      return Math.floor((currentTime.getTime() - startTime.getTime()) / 60000);
+      try {
+        // Get the timestamp directly from activeSession
+        if (!activeSession) return 0;
+
+        let startTimeMs;
+
+        // Handle different timestamp formats
+        if (typeof activeSession.startTime === "number") {
+          startTimeMs = activeSession.startTime;
+        } else if (typeof activeSession.startTime === "string") {
+          // Try to parse the string date
+          startTimeMs = new Date(activeSession.startTime).getTime();
+
+          // If parsing failed, use current time (fallback to now)
+          if (isNaN(startTimeMs)) {
+            console.error("Invalid date format:", activeSession.startTime);
+            // Use a sensible fallback - session just started
+            startTimeMs = Date.now();
+          }
+        } else {
+          console.error("Missing or invalid startTime in session");
+          return 0;
+        }
+
+        const currentTime = Date.now();
+        const elapsedMs = Math.max(0, currentTime - startTimeMs);
+        return Math.floor(elapsedMs / 60000);
+      } catch (error) {
+        console.error("Error calculating elapsed time:", error);
+        return 0;
+      }
     };
 
     setElapsedMinutes(calculateElapsed());
 
-    // Update every minute
+    // Update every 5 seconds for more responsive UI
     const interval = setInterval(() => {
       setElapsedMinutes(calculateElapsed());
-    }, 60000);
+    }, 5000);
 
     return () => clearInterval(interval);
+  }, [activeSession]);
+
+  useEffect(() => {
+    // Initial check
+    if (!activeSession) return;
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      // Force re-render when storage changes
+      setElapsedMinutes((prev) => prev); // Dummy state update to force re-render
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, [activeSession]);
 
   if (!activeSession) return null;
 
   return (
-    <div className="bg-amber-100 border-l-4 border-amber-500 p-4 mb-4 shadow-md">
+    <div className="bg-amber-100 dark:bg-amber-900 border-l-4 border-amber-500 p-4 mb-4 shadow-md">
       <div className="flex justify-between items-center">
         <div>
-          <p className="font-bold">Active Workout Session</p>
-          <p className="text-sm text-gray-600">
+          <p className="font-bold dark:text-white">Active Workout Session</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             {activeSession.workoutName} ({elapsedMinutes}{" "}
             {elapsedMinutes === 1 ? "minute" : "minutes"} elapsed)
           </p>
@@ -62,6 +107,7 @@ export default function ActiveSessionBanner() {
             href={`/protected/workouts/${activeSession.workoutId}/session`}
             color="primary"
             size="sm"
+            className="dark:text-white"
           >
             Return to Session
           </Button>
