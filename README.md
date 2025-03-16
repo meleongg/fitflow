@@ -1,7 +1,7 @@
 # FitFlow - Modern Fitness Tracking App
 
 <p align="center">
-  <img src="https://via.placeholder.com/150" alt="FitFlow Logo" width="150" height="150">
+  <img width="734" alt="image" src="https://github.com/user-attachments/assets/2f61d4a9-d13f-46d4-b12b-8d721a80dc7e" />
 </p>
 
 **Tech Stack:** Next.js 14, Supabase, TypeScript, Tailwind CSS, NextUI, ShadCN UI, Recharts
@@ -19,7 +19,7 @@ FitFlow is a full-stack web application that helps users track their fitness pro
 - **Responsive Design** - Optimized for both desktop and mobile use
 
 <p align="center">
-  <img src="https://via.placeholder.com/800x400" alt="FitFlow Dashboard" width="800">
+  <img width="727" alt="image" src="https://github.com/user-attachments/assets/4d4ae4dd-37e0-4f93-9ed5-5f912f68370c" />
 </p>
 
 ## Technical Highlights
