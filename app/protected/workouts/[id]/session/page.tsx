@@ -472,7 +472,9 @@ export default function WorkoutSession() {
   return (
     <>
       <PageTitle title={workout.name} />
-      <BackButton url="/protected/workouts" />
+      <div className="flex items-center">
+        <BackButton url="/protected/workouts" />
+      </div>
 
       {/* Add Timer component below the title */}
       <div className="bg-creamyBeige p-4 rounded-lg mb-4">

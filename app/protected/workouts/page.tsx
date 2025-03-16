@@ -134,39 +134,55 @@ export default function WorkoutsPage() {
   }, []);
 
   return (
-    <div>
+    <div className="flex flex-col space-y-6 p-4">
       <ActiveSessionBanner />
+
       <PageTitle title="Workouts" />
-      <div className="bg-creamyBeige p-4 rounded-lg">
-        This is the workout library. Create workouts or start sessions!
+
+      <div className="bg-creamyBeige p-5 rounded-lg shadow-sm">
+        <p className="text-sm">
+          This is the workout library. Create workouts or start sessions!
+        </p>
       </div>
-      <Button
-        as={Link}
-        href="/protected/workouts/create-workout"
-        color="primary"
-      >
-        Create Workout
-      </Button>
-      <Table aria-label="Example static collection table">
-        <TableHeader>
-          <TableColumn>NAME</TableColumn>
-          <TableColumn>ACTIONS</TableColumn>
-        </TableHeader>
-        <TableBody>
-          {(workouts || []).map((workout) => (
-            <TableRow key={workout.id}>
-              <TableCell>{workout.name}</TableCell>
-              <TableCell>
-                <Actions
-                  id={workout.id}
-                  workoutName={workout.name}
-                  setWorkouts={setWorkouts}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+
+      <div className="flex justify-between items-center">
+        <Button
+          as={Link}
+          href="/protected/workouts/create-workout"
+          color="primary"
+          className="mb-4"
+        >
+          Create Workout
+        </Button>
+      </div>
+
+      <div className="rounded-lg overflow-hidden border border-default-200 shadow-sm">
+        <Table
+          aria-label="Workouts table"
+          classNames={{
+            wrapper: "shadow-none",
+          }}
+        >
+          <TableHeader>
+            <TableColumn>NAME</TableColumn>
+            <TableColumn>ACTIONS</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {(workouts || []).map((workout) => (
+              <TableRow key={workout.id}>
+                <TableCell>{workout.name}</TableCell>
+                <TableCell>
+                  <Actions
+                    id={workout.id}
+                    workoutName={workout.name}
+                    setWorkouts={setWorkouts}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

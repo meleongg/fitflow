@@ -38,7 +38,7 @@ export default function Navbar() {
   ];
 
   return (
-    <div className="fixed bottom-0 w-full border-t border-border bg-background py-2 px-4 z-50">
+    <div className="fixed bottom-0 w-full border-t border-border bg-background py-2 px-4 z-[999] bg-opacity-100">
       <nav className="max-w-md mx-auto">
         <ul className="flex justify-between items-center">
           {navItems.map((item) => {

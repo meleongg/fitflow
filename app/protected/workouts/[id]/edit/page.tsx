@@ -343,7 +343,9 @@ export default function EditWorkout() {
     <>
       <ActiveSessionBanner />
       <PageTitle title={workout.name} />
-      <BackButton url="/protected/workouts" />
+      <div className="flex items-center">
+        <BackButton url="/protected/workouts" />
+      </div>
 
       <Form
         className="max-w-full justify-center items-center space-y-4"

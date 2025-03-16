@@ -87,7 +87,9 @@ export default function ViewWorkout() {
     <>
       <ActiveSessionBanner />
       <PageTitle title={workout.name} />
-      <BackButton url="/protected/workouts" />
+      <div className="flex items-center">
+        <BackButton url="/protected/workouts" />
+      </div>
       <div className="flex gap-4 mb-4">
         <Button
           color="primary"

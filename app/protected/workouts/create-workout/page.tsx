@@ -246,9 +246,9 @@ export default function CreateWorkout() {
   return (
     <>
       <PageTitle title="New Workout" />
-      <BackButton url="/protected/workouts" />
-      <div className="bg-creamyBeige p-4 rounded-lg">
-        Choose from our existing exercises or create your own.
+
+      <div className="flex items-center">
+        <BackButton url="/protected/workouts" />
       </div>
 
       <Form
