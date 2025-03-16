@@ -1,7 +1,9 @@
 "use client";
 
 import PageTitle from "@/components/ui/page-title";
+import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { createClient } from "@/utils/supabase/client";
+import { kgToLbs } from "@/utils/units";
 import {
   Button,
   Card,
@@ -32,6 +34,7 @@ import {
 
 export default function AnalyticsPage() {
   const supabase = createClient();
+  const { useMetric } = useUnitPreference();
   const [isLoading, setIsLoading] = useState(true);
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState("all");
@@ -42,6 +45,11 @@ export default function AnalyticsPage() {
   const [personalRecords, setPersonalRecords] = useState<any[]>([]);
   const [volumeData, setVolumeData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Helper function to display weight based on user preference
+  const displayWeight = (weightKg: number): string => {
+    return useMetric ? `${weightKg} kg` : `${kgToLbs(weightKg).toFixed(1)} lbs`;
+  };
 
   // Fetch user's exercises and session data
   useEffect(() => {
@@ -257,14 +265,20 @@ export default function AnalyticsPage() {
         onSelectionChange={(key) => setActiveTab(key as string)}
         color="primary"
         variant="underlined"
-        className="mb-6"
+        className="mb-6 w-full"
+        classNames={{
+          tabList: "gap-4 w-full",
+          panel: "w-full",
+          base: "w-full",
+          tab: "max-w-fit",
+        }}
       >
         <Tab
           key="progress"
           title={
             <div className="flex items-center gap-2">
               <TrendingUp size={18} />
-              <span>Progress Charts</span>
+              <span className="whitespace-nowrap">Progress Charts</span>
             </div>
           }
         />
@@ -273,7 +287,7 @@ export default function AnalyticsPage() {
           title={
             <div className="flex items-center gap-2">
               <Weight size={18} />
-              <span>Personal Records</span>
+              <span className="whitespace-nowrap">Personal Records</span>
             </div>
           }
         />
@@ -282,7 +296,7 @@ export default function AnalyticsPage() {
           title={
             <div className="flex items-center gap-2">
               <BarChart3 size={18} />
-              <span>Volume Analysis</span>
+              <span className="whitespace-nowrap">Volume Analysis</span>
             </div>
           }
         />
@@ -358,19 +372,22 @@ export default function AnalyticsPage() {
                           />
                           <YAxis
                             label={{
-                              value: "Weight (kg)",
+                              value: `Weight (${useMetric ? "kg" : "lbs"})`,
                               angle: -90,
                               position: "insideLeft",
                             }}
                           />
                           <Tooltip
-                            formatter={(value) => [`${value} kg`, "Max Weight"]}
+                            formatter={(value) => [
+                              `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
+                              "Max Weight",
+                            ]}
                           />
                           <Legend />
                           <Line
                             type="monotone"
                             dataKey="maxWeight"
-                            name="Max Weight (kg)"
+                            name={`Max Weight (${useMetric ? "kg" : "lbs"})`}
                             stroke="#8884d8"
                             strokeWidth={2}
                             dot={{ r: 4 }}
@@ -400,14 +417,14 @@ export default function AnalyticsPage() {
                           />
                           <YAxis
                             label={{
-                              value: "Volume (kg)",
+                              value: `Volume (${useMetric ? "kg" : "lbs"})`,
                               angle: -90,
                               position: "insideLeft",
                             }}
                           />
                           <Tooltip
                             formatter={(value) => [
-                              `${value} kg`,
+                              `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
                               "Total Volume",
                             ]}
                           />
@@ -415,7 +432,7 @@ export default function AnalyticsPage() {
                           <Line
                             type="monotone"
                             dataKey="totalVolume"
-                            name="Total Volume (kg)"
+                            name={`Total Volume (${useMetric ? "kg" : "lbs"})`}
                             stroke="#82ca9d"
                             strokeWidth={2}
                             dot={{ r: 4 }}
@@ -489,7 +506,9 @@ export default function AnalyticsPage() {
                               Max Weight
                             </span>
                             <span className="font-bold">
-                              {record.max_weight} kg
+                              {useMetric
+                                ? `${record.max_weight} kg`
+                                : `${kgToLbs(record.max_weight).toFixed(1)} lbs`}
                             </span>
                           </div>
                           <div className="flex flex-col items-center p-2 bg-gray-50 rounded-md">
@@ -503,7 +522,9 @@ export default function AnalyticsPage() {
                               Max Volume
                             </span>
                             <span className="font-bold">
-                              {record.max_volume} kg
+                              {useMetric
+                                ? `${record.max_volume} kg`
+                                : `${kgToLbs(record.max_volume).toFixed(1)} lbs`}
                             </span>
                           </div>
                         </div>
@@ -562,7 +583,14 @@ export default function AnalyticsPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={volumeData} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
+                        <XAxis
+                          type="number"
+                          label={{
+                            value: `Volume (${useMetric ? "kg" : "lbs"})`,
+                            position: "insideBottom",
+                            offset: -5,
+                          }}
+                        />
                         <YAxis
                           dataKey="name"
                           type="category"
@@ -570,12 +598,15 @@ export default function AnalyticsPage() {
                           tick={{ fontSize: 12 }}
                         />
                         <Tooltip
-                          formatter={(value) => [`${value} kg`, "Volume"]}
+                          formatter={(value) => [
+                            `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
+                            "Volume",
+                          ]}
                         />
                         <Legend />
                         <Bar
                           dataKey="volume"
-                          name="Total Volume (kg)"
+                          name={`Total Volume (${useMetric ? "kg" : "lbs"})`}
                           fill="#8884d8"
                           radius={[0, 4, 4, 0]}
                         />
