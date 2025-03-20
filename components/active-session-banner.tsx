@@ -1,7 +1,14 @@
 "use client";
 
 import { useSession } from "@/contexts/SessionContext";
-import { Button } from "@nextui-org/react";
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@nextui-org/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -9,6 +16,7 @@ export default function ActiveSessionBanner() {
   const { activeSession, endSession } = useSession();
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [isClient, setIsClient] = useState(false);
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
 
   // Use this to prevent hydration mismatch
   useEffect(() => {
@@ -102,13 +110,7 @@ export default function ActiveSessionBanner() {
             color="danger"
             variant="flat"
             className="w-full sm:w-auto"
-            onPress={() => {
-              if (
-                confirm("Are you sure you want to end this workout session?")
-              ) {
-                endSession();
-              }
-            }}
+            onPress={() => setShowEndConfirmation(true)}
           >
             End Session
           </Button>
@@ -123,6 +125,44 @@ export default function ActiveSessionBanner() {
           </Button>
         </div>
       </div>
+
+      <Modal
+        isOpen={showEndConfirmation}
+        onClose={() => setShowEndConfirmation(false)}
+        placement="center"
+        size="sm"
+        classNames={{
+          base: "m-0 mx-auto",
+          wrapper: "items-center justify-center p-2",
+        }}
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            End Session?
+          </ModalHeader>
+          <ModalBody>
+            <p>Are you sure you want to end this workout session?</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              variant="light"
+              onPress={() => setShowEndConfirmation(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              onPress={() => {
+                endSession();
+                setShowEndConfirmation(false);
+              }}
+            >
+              End Session
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
