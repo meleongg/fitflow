@@ -482,7 +482,7 @@ export default function WorkoutSession() {
   if (!workout) return <div>Workout not found</div>;
 
   return (
-    <>
+    <div className="w-full px-2 pb-16 max-w-full overflow-x-hidden">
       <PageTitle title={workout.name} />
       <div className="flex items-center">
         <BackButton url="/protected/workouts" />
@@ -501,29 +501,39 @@ export default function WorkoutSession() {
         </p>
       </div>
       <Form
-        className="max-w-full justify-center items-center space-y-4"
+        className="w-full max-w-full justify-center items-center space-y-4"
         validationBehavior="native"
         onReset={() => setSubmitted(null)}
         onSubmit={onSessionSubmit}
       >
-        <div className="flex flex-col gap-4 max-w-md">
-          {/* Modal for Selecting Exercises */}
+        <div className="flex flex-col gap-4 w-full">
+          {/* Modal for Selecting Exercises - Updated */}
           <Modal
             backdrop="opaque"
             isOpen={isOpen}
             onClose={onClose}
             radius="lg"
             onOpenChange={onOpenChange}
-            className="flex items-center justify-center"
+            placement="center"
+            scrollBehavior="inside"
+            classNames={{
+              base: "m-0 mx-auto",
+              wrapper: "items-center justify-center p-2",
+            }}
           >
-            <ModalContent>
+            <ModalContent className="max-w-[95vw] sm:max-w-md">
               {(onClose) => (
                 <>
                   <ModalHeader>
                     <h3 className="text-lg font-bold">Select Exercise</h3>
                   </ModalHeader>
                   <ModalBody>
-                    <Table aria-label="Available Exercises">
+                    <Table
+                      aria-label="Available Exercises"
+                      classNames={{
+                        base: "max-w-full overflow-x-auto",
+                      }}
+                    >
                       <TableHeader>
                         <TableColumn>NAME</TableColumn>
                         <TableColumn>CATEGORY</TableColumn>
@@ -552,6 +562,7 @@ export default function WorkoutSession() {
                     <Pagination
                       total={totalPages}
                       initialPage={currentPage}
+                      size="sm"
                       onChange={(page) => setCurrentPage(page)}
                     />
                   </ModalBody>
@@ -565,16 +576,21 @@ export default function WorkoutSession() {
             </ModalContent>
           </Modal>
 
-          {/* Modal for Adding Custom Exercise */}
+          {/* Modal for Adding Custom Exercise - Updated */}
           <Modal
             backdrop="opaque"
             isOpen={isCustomOpen}
             onClose={onCustomClose}
             radius="lg"
             onOpenChange={onCustomOpenChange}
-            className="flex items-center justify-center"
+            placement="center"
+            scrollBehavior="inside"
+            classNames={{
+              base: "m-0 mx-auto",
+              wrapper: "items-center justify-center p-2",
+            }}
           >
-            <ModalContent>
+            <ModalContent className="max-w-[95vw] sm:max-w-md">
               {(onCustomClose) => (
                 <>
                   <ModalHeader>
@@ -641,11 +657,13 @@ export default function WorkoutSession() {
             {sessionExercises.map((exercise, exerciseIndex) => (
               <div
                 key={exercise.id}
-                className="mb-8 bg-white p-4 rounded-lg shadow"
+                className="mb-8 bg-white p-3 sm:p-4 rounded-lg shadow w-full overflow-hidden"
               >
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold">{exercise.name}</h3>
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+                  <h3 className="text-xl font-bold break-words">
+                    {exercise.name}
+                  </h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                     <div className="text-sm text-gray-600">
                       Target: {exercise.targetSets} sets × {exercise.targetReps}{" "}
                       reps @ {displayWeight(exercise.targetWeight, useMetric)}
@@ -661,76 +679,92 @@ export default function WorkoutSession() {
                   </div>
                 </div>
 
-                <Table aria-label={`${exercise.name} sets`}>
-                  <TableHeader>
-                    <TableColumn>SET</TableColumn>
-                    <TableColumn>REPS</TableColumn>
-                    <TableColumn>
-                      WEIGHT ({useMetric ? "KG" : "LBS"})
-                    </TableColumn>
-                    <TableColumn>STATUS</TableColumn>
-                  </TableHeader>
-                  <TableBody>
-                    {exercise.actualSets.map((set, setIndex) => (
-                      <TableRow key={setIndex}>
-                        <TableCell>{set.setNumber}</TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={String(set.reps)}
-                            className="w-20"
-                            onChange={(e) => {
-                              const newExercises = [...sessionExercises];
-                              newExercises[exerciseIndex].actualSets[
-                                setIndex
-                              ].reps = Number(e.target.value);
-                              setSessionExercises(newExercises);
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            // If stored in kg, convert to lbs for display when useMetric is false
-                            value={
-                              useMetric
-                                ? String(set.weight)
-                                : String(kgToLbs(set.weight).toFixed(1))
-                            }
-                            className="w-20"
-                            onChange={(e) => {
-                              const newExercises = [...sessionExercises];
-                              // Convert input back to kg for storage if needed
-                              const inputValue = Number(e.target.value);
-                              const storageValue = useMetric
-                                ? inputValue
-                                : lbsToKg(inputValue);
-                              newExercises[exerciseIndex].actualSets[
-                                setIndex
-                              ].weight = storageValue;
-                              setSessionExercises(newExercises);
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            color={set.completed ? "success" : "primary"}
-                            size="sm"
-                            onPress={() => {
-                              const newExercises = [...sessionExercises];
-                              newExercises[exerciseIndex].actualSets[
-                                setIndex
-                              ].completed = !set.completed;
-                              setSessionExercises(newExercises);
-                            }}
-                          >
-                            {set.completed ? "Completed" : "Mark Complete"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="w-full overflow-x-auto -mx-1 px-1">
+                  <Table
+                    aria-label={`${exercise.name} sets`}
+                    classNames={{
+                      wrapper: "min-w-full",
+                    }}
+                  >
+                    <TableHeader>
+                      <TableColumn className="w-[60px]">SET</TableColumn>
+                      <TableColumn className="w-[80px]">REPS</TableColumn>
+                      <TableColumn className="w-[100px]">
+                        WEIGHT ({useMetric ? "KG" : "LBS"})
+                      </TableColumn>
+                      <TableColumn className="w-[130px]">STATUS</TableColumn>
+                    </TableHeader>
+                    <TableBody>
+                      {exercise.actualSets.map((set, setIndex) => (
+                        <TableRow key={setIndex}>
+                          <TableCell className="text-center">
+                            {set.setNumber}
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={String(set.reps)}
+                              size="sm"
+                              classNames={{
+                                input: "text-right",
+                                base: "min-w-0 w-16",
+                              }}
+                              onChange={(e) => {
+                                const newExercises = [...sessionExercises];
+                                newExercises[exerciseIndex].actualSets[
+                                  setIndex
+                                ].reps = Number(e.target.value);
+                                setSessionExercises(newExercises);
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={
+                                useMetric
+                                  ? String(set.weight)
+                                  : String(kgToLbs(set.weight).toFixed(1))
+                              }
+                              size="sm"
+                              classNames={{
+                                input: "text-right",
+                                base: "min-w-0 w-16",
+                              }}
+                              onChange={(e) => {
+                                const newExercises = [...sessionExercises];
+                                const inputValue = Number(e.target.value);
+                                const storageValue = useMetric
+                                  ? inputValue
+                                  : lbsToKg(inputValue);
+                                newExercises[exerciseIndex].actualSets[
+                                  setIndex
+                                ].weight = storageValue;
+                                setSessionExercises(newExercises);
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              color={set.completed ? "success" : "primary"}
+                              size="sm"
+                              className="w-full min-w-[110px]"
+                              onPress={() => {
+                                const newExercises = [...sessionExercises];
+                                newExercises[exerciseIndex].actualSets[
+                                  setIndex
+                                ].completed = !set.completed;
+                                setSessionExercises(newExercises);
+                              }}
+                            >
+                              {set.completed ? "Completed" : "Mark Complete"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
 
                 <div className="mt-4 flex gap-2">
                   <Button
@@ -752,21 +786,30 @@ export default function WorkoutSession() {
               </div>
             ))}
 
-            <div className="flex gap-4 mt-4">
-              <div>
-                <Button color="primary" onPress={onOpen}>
-                  Add Exercise
-                </Button>
-              </div>
-              <div>
-                <Button color="secondary" onPress={onCustomOpen}>
-                  Add Custom Exercise
-                </Button>
-              </div>
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+              <Button
+                color="primary"
+                className="w-full sm:w-auto"
+                onPress={onOpen}
+              >
+                Add Exercise
+              </Button>
+              <Button
+                color="secondary"
+                className="w-full sm:w-auto"
+                onPress={onCustomOpen}
+              >
+                Add Custom Exercise
+              </Button>
             </div>
 
-            <div className="mt-8 flex gap-4">
-              <Button color="success" size="lg" type="submit">
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <Button
+                color="success"
+                size="lg"
+                type="submit"
+                className="w-full"
+              >
                 Complete Workout
               </Button>
 
@@ -774,6 +817,7 @@ export default function WorkoutSession() {
                 color="danger"
                 size="lg"
                 variant="flat"
+                className="w-full"
                 onPress={() => {
                   // Show confirmation dialog
                   if (
@@ -806,6 +850,6 @@ export default function WorkoutSession() {
           back online.
         </div>
       )}
-    </>
+    </div>
   );
 }
