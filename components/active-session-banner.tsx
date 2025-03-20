@@ -79,7 +79,8 @@ export default function ActiveSessionBanner() {
 
   return (
     <div className="bg-amber-100 dark:bg-amber-900 border-l-4 border-amber-500 p-4 mb-4 shadow-md">
-      <div className="flex justify-between items-center">
+      {/* Change to flex-col on mobile, flex-row on larger screens */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
           <p className="font-bold dark:text-white">Active Workout Session</p>
           <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -87,12 +88,15 @@ export default function ActiveSessionBanner() {
             {elapsedMinutes === 1 ? "minute" : "minutes"} elapsed)
           </p>
         </div>
-        <div className="flex gap-2">
+
+        {/* Make buttons full width on mobile, auto width on larger screens */}
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button
             size="sm"
             color="danger"
             variant="flat"
-            onClick={() => {
+            className="w-full sm:w-auto"
+            onPress={() => {
               if (
                 confirm("Are you sure you want to end this workout session?")
               ) {
@@ -107,7 +111,7 @@ export default function ActiveSessionBanner() {
             href={`/protected/workouts/${activeSession.workoutId}/session`}
             color="primary"
             size="sm"
-            className="dark:text-white"
+            className="w-full sm:w-auto dark:text-white"
           >
             Return to Session
           </Button>
