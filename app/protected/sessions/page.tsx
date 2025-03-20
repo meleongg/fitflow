@@ -1,8 +1,10 @@
 "use client";
 
 import PageTitle from "@/components/ui/page-title";
+import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { createClient } from "@/utils/supabase/client";
-import { Button, Card, Chip, Skeleton } from "@nextui-org/react";
+import { kgToLbs } from "@/utils/units";
+import { Button, Card, Chip, Pagination, Skeleton } from "@nextui-org/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -82,6 +84,10 @@ export default function SessionsPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [months, setMonths] = useState<string[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sessionsPerPage] = useState(10);
+
+  const { useMetric, isLoading: loadingPreferences } = useUnitPreference();
 
   const supabase = createClient();
 
@@ -151,20 +157,71 @@ export default function SessionsPage() {
     } else {
       setFilteredSessions(sessions);
     }
+    // Reset to first page whenever filter changes
+    setCurrentPage(1);
   }, [selectedMonth, sessions]);
 
-  // Group sessions by date
-  const sessionsByDate = filteredSessions.reduce(
-    (groups: any, session: any) => {
-      const date = new Date(session.started_at).toDateString();
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(session);
-      return groups;
-    },
-    {}
+  // Calculate paginated sessions - add this before grouping
+  const paginateSessionsByDate = () => {
+    // First group all filtered sessions by date
+    const groupedByDate = filteredSessions.reduce(
+      (groups: any, session: any) => {
+        const date = new Date(session.started_at).toDateString();
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(session);
+        return groups;
+      },
+      {}
+    );
+
+    // Convert to array of [date, sessions] pairs for easier pagination
+    const dateSessionPairs = Object.entries(groupedByDate);
+
+    // Calculate pagination indexes
+    const indexOfLastItem = currentPage * sessionsPerPage;
+    const indexOfFirstItem = indexOfLastItem - sessionsPerPage;
+
+    // Slice the array for current page
+    const currentItems = dateSessionPairs.slice(
+      indexOfFirstItem,
+      indexOfLastItem
+    );
+
+    // Convert back to object
+    return currentItems.reduce((acc: any, [date, sessions]) => {
+      acc[date] = sessions;
+      return acc;
+    }, {});
+  };
+
+  // Use this function instead of directly using sessionsByDate
+  const paginatedSessionsByDate = isLoading ? {} : paginateSessionsByDate();
+
+  // Calculate total pages
+  const totalPages = Math.ceil(
+    Object.keys(
+      filteredSessions.reduce((groups: any, session: any) => {
+        const date = new Date(session.started_at).toDateString();
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(session);
+        return groups;
+      }, {})
+    ).length / sessionsPerPage
   );
+
+  const displayTotalWeight = (totalKg: number): number | string => {
+    if (loadingPreferences) return "-";
+
+    if (useMetric) {
+      return Math.floor(totalKg);
+    } else {
+      return Math.floor(kgToLbs(totalKg));
+    }
+  };
 
   if (error) {
     return (
@@ -212,9 +269,11 @@ export default function SessionsPage() {
               </div>
               <div className="p-3 bg-creamyBeige rounded-lg">
                 <div className="text-3xl font-bold">
-                  {Math.floor(calculateTotalWeight(sessions))}
+                  {displayTotalWeight(calculateTotalWeight(sessions))}
                 </div>
-                <div className="text-sm">Total Volume (kg)</div>
+                <div className="text-sm">
+                  Total Volume ({useMetric ? "kg" : "lbs"})
+                </div>
               </div>
             </>
           )}
@@ -250,7 +309,7 @@ export default function SessionsPage() {
             <Skeleton className="h-40 rounded-lg" />
             <Skeleton className="h-40 rounded-lg" />
           </>
-        ) : Object.keys(sessionsByDate).length === 0 ? (
+        ) : Object.keys(paginatedSessionsByDate).length === 0 ? (
           <div className="text-center p-12 bg-gray-50 rounded-lg">
             <p className="text-xl font-semibold text-gray-500">
               No sessions found for this month
@@ -260,56 +319,86 @@ export default function SessionsPage() {
             </p>
           </div>
         ) : (
-          Object.entries(sessionsByDate).map(([date, dateSessions]) => (
-            <div key={date}>
-              <h3 className="text-md font-medium text-gray-500 mb-3">
-                {formatDate(date)}
-              </h3>
-              <div className="space-y-4">
-                {(dateSessions as any[]).map((session) => (
-                  <Card
-                    key={session.id}
-                    className="p-4 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="text-lg font-bold">
-                          {session.workout.name}
-                        </h3>
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                          <span>
-                            {formatDuration(
-                              session.started_at,
-                              session.ended_at
+          <>
+            {Object.entries(paginatedSessionsByDate).map(
+              ([date, dateSessions]) => (
+                <div key={date}>
+                  <h3 className="text-md font-medium text-gray-500 mb-3">
+                    {formatDate(date)}
+                  </h3>
+                  <div className="space-y-4">
+                    {(dateSessions as any[]).map((session) => (
+                      <Card
+                        key={session.id}
+                        className="p-4 shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        {/* Make header section stack on mobile, side-by-side on larger screens */}
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+                          <div>
+                            <h3 className="text-lg font-bold mb-2">
+                              {session.workout.name}
+                            </h3>
+                            <div className="flex items-center gap-3 text-sm text-gray-600">
+                              <span>
+                                {formatDuration(
+                                  session.started_at,
+                                  session.ended_at
+                                )}
+                              </span>
+                              <span>•</span>
+                              <span>
+                                {session.session_exercises.length} sets
+                              </span>
+                            </div>
+                          </div>
+                          <Chip
+                            size="sm"
+                            color="primary"
+                            variant="flat"
+                            className="self-start"
+                          >
+                            {new Date(session.started_at).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
                             )}
-                          </span>
-                          <span>•</span>
-                          <span>{session.session_exercises.length} sets</span>
+                          </Chip>
                         </div>
-                      </div>
-                      <Chip size="sm" color="primary" variant="flat">
-                        {new Date(session.started_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </Chip>
-                    </div>
 
-                    <Button
-                      as={Link}
-                      href={`/protected/sessions/${session.id}`}
-                      color="primary"
-                      variant="flat"
-                      size="sm"
-                      className="mt-2"
-                    >
-                      View Details
-                    </Button>
-                  </Card>
-                ))}
+                        <Button
+                          as={Link}
+                          href={`/protected/sessions/${session.id}`}
+                          color="primary"
+                          variant="flat"
+                          size="sm"
+                          className="mt-2"
+                        >
+                          View Details
+                        </Button>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-8">
+                <Pagination
+                  total={totalPages}
+                  initialPage={currentPage}
+                  page={currentPage}
+                  onChange={(page) => setCurrentPage(page)}
+                  color="primary"
+                  showControls
+                  size="lg"
+                />
               </div>
-            </div>
-          ))
+            )}
+          </>
         )}
       </div>
     </div>
