@@ -285,8 +285,17 @@ export default function ExerciseLibraryPage() {
       )}
 
       {/* Add/Edit Exercise Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalContent>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        placement="center"
+        scrollBehavior="inside"
+        classNames={{
+          base: "m-0 mx-auto",
+          wrapper: "items-center justify-center p-2",
+        }}
+      >
+        <ModalContent className="max-w-[95vw] sm:max-w-md">
           {() => (
             <>
               <ModalHeader>
@@ -317,9 +326,12 @@ export default function ExerciseLibraryPage() {
                     label="Category"
                     placeholder="Select a category"
                     selectedKeys={[
-                      editExercise
-                        ? editExercise.category_id
-                        : newExercise.category_id,
+                      // Convert to string to ensure type consistency
+                      String(
+                        editExercise
+                          ? editExercise.category_id
+                          : newExercise.category_id
+                      ),
                     ]}
                     onChange={(e) => {
                       if (editExercise) {
@@ -336,7 +348,7 @@ export default function ExerciseLibraryPage() {
                     }}
                   >
                     {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
+                      <SelectItem key={String(category.id)} value={category.id}>
                         {category.name}
                       </SelectItem>
                     ))}
