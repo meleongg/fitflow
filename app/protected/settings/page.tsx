@@ -277,7 +277,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-4 pb-24 space-y-6 w-full max-w-4xl mx-auto min-w-[320px]">
+    <div className="p-4 pb-16 space-y-6 w-full max-w-4xl mx-auto min-w-[320px]">
       <PageTitle title="Settings" />
 
       <Tabs
@@ -644,9 +644,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-
-      {/* Add extra spacer at the bottom to handle navbar overlap */}
-      <div className="h-16"></div>
     </div>
   );
 }
