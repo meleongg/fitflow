@@ -391,23 +391,33 @@ export default function CreateWorkout() {
             </div>
           </div>
 
-          {/* Modal for Selecting Exercises */}
+          {/* Updated Modal for Selecting Exercises */}
           <Modal
             backdrop="opaque"
             isOpen={isOpen}
             onClose={onClose}
             radius="lg"
             onOpenChange={onOpenChange}
-            className="flex items-center justify-center"
+            placement="center" // Add this for proper positioning
+            scrollBehavior="inside" // Better scrolling on mobile
+            classNames={{
+              base: "m-0 mx-auto", // Center the modal
+              wrapper: "items-center justify-center p-2", // Ensure wrapper is centered with padding
+            }}
           >
-            <ModalContent>
+            <ModalContent className="max-w-[95vw] sm:max-w-md">
               {(onClose) => (
                 <>
                   <ModalHeader>
                     <h3 className="text-lg font-bold">Select Exercise</h3>
                   </ModalHeader>
                   <ModalBody>
-                    <Table aria-label="Available Exercises">
+                    <Table
+                      aria-label="Available Exercises"
+                      classNames={{
+                        base: "max-w-full overflow-x-auto",
+                      }}
+                    >
                       <TableHeader>
                         <TableColumn>NAME</TableColumn>
                         <TableColumn>CATEGORY</TableColumn>
@@ -436,6 +446,7 @@ export default function CreateWorkout() {
                     <Pagination
                       total={totalPages}
                       initialPage={currentPage}
+                      size="sm" // Smaller pagination on mobile
                       onChange={(page) => setCurrentPage(page)}
                     />
                   </ModalBody>
@@ -449,16 +460,21 @@ export default function CreateWorkout() {
             </ModalContent>
           </Modal>
 
-          {/* Modal for Adding Custom Exercise */}
+          {/* Updated Modal for Adding Custom Exercise - Apply the same changes */}
           <Modal
             backdrop="opaque"
             isOpen={isCustomOpen}
             onClose={onCustomClose}
             radius="lg"
             onOpenChange={onCustomOpenChange}
-            className="flex items-center justify-center"
+            placement="center"
+            scrollBehavior="inside"
+            classNames={{
+              base: "m-0 mx-auto",
+              wrapper: "items-center justify-center p-2",
+            }}
           >
-            <ModalContent>
+            <ModalContent className="max-w-[95vw] sm:max-w-md">
               {(onCustomClose) => (
                 <>
                   <ModalHeader>

@@ -8,10 +8,16 @@ import { useEffect, useState } from "react";
 export default function ActiveSessionBanner() {
   const { activeSession, endSession } = useSession();
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+
+  // Use this to prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Update elapsed time every minute
   useEffect(() => {
-    if (!activeSession) return;
+    if (!activeSession || !isClient) return;
 
     // Calculate initial elapsed time
     const calculateElapsed = () => {
@@ -31,7 +37,6 @@ export default function ActiveSessionBanner() {
           // If parsing failed, use current time (fallback to now)
           if (isNaN(startTimeMs)) {
             console.error("Invalid date format:", activeSession.startTime);
-            // Use a sensible fallback - session just started
             startTimeMs = Date.now();
           }
         } else {
@@ -56,25 +61,26 @@ export default function ActiveSessionBanner() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [activeSession]);
+  }, [activeSession, isClient]);
 
+  // Storage event listener
   useEffect(() => {
-    // Initial check
-    if (!activeSession) return;
+    if (!activeSession || !isClient) return;
 
-    // Listen for storage changes
     const handleStorageChange = () => {
-      // Force re-render when storage changes
-      setElapsedMinutes((prev) => prev); // Dummy state update to force re-render
+      setElapsedMinutes((prev) => prev);
     };
 
     window.addEventListener("storage", handleStorageChange);
-
     return () => {
       window.removeEventListener("storage", handleStorageChange);
     };
-  }, [activeSession]);
+  }, [activeSession, isClient]);
 
+  // Show nothing during server rendering
+  if (!isClient) return null;
+
+  // Also show nothing if no active session
   if (!activeSession) return null;
 
   return (
