@@ -353,13 +353,13 @@ export default function EditWorkout() {
       </div>
 
       <Form
-        className="max-w-full justify-center items-center space-y-4"
+        className="max-w-full px-2 justify-center items-center space-y-4"
         validationBehavior="native"
         validationErrors={errors}
         onReset={() => setSubmitted(null)}
         onSubmit={onWorkoutSubmit}
       >
-        <div className="flex flex-col gap-4 max-w-md">
+        <div className="flex flex-col gap-4 w-full max-w-md">
           <Input
             isRequired
             value={workoutName}
@@ -375,7 +375,7 @@ export default function EditWorkout() {
             name="name"
             placeholder="Enter workout name"
             onChange={(e) => setWorkoutName(e.target.value)}
-            className="max-w-md"
+            className="w-full"
           />
           <Textarea
             isRequired
@@ -391,30 +391,39 @@ export default function EditWorkout() {
             name="description"
             value={workoutDescription}
             onChange={(e) => setWorkoutDescription(e.target.value)}
-            className="max-w-md"
+            className="w-full"
           />
 
           <h2>Exercises</h2>
 
-          <div className="w-full">
-            <Table aria-label="Exercise table">
+          <div className="w-full overflow-x-auto pb-2">
+            <Table
+              aria-label="Exercise table"
+              classNames={{
+                wrapper: "min-w-full overflow-x-auto",
+              }}
+            >
               <TableHeader>
-                <TableColumn>NAME</TableColumn>
-                <TableColumn>SETS</TableColumn>
-                <TableColumn>REPS</TableColumn>
-                <TableColumn>WEIGHT</TableColumn>
-                <TableColumn>ACTIONS</TableColumn>
+                <TableColumn className="whitespace-nowrap">NAME</TableColumn>
+                <TableColumn className="w-[70px]">SETS</TableColumn>
+                <TableColumn className="w-[70px]">REPS</TableColumn>
+                <TableColumn className="w-[80px]">WEIGHT</TableColumn>
+                <TableColumn className="w-[90px]">ACTIONS</TableColumn>
               </TableHeader>
               <TableBody>
                 {workoutExercises.map((exercise, index) => (
                   <TableRow key={index}>
-                    <TableCell>{exercise.name}</TableCell>
+                    <TableCell className="max-w-[150px] truncate">
+                      {exercise.name}
+                    </TableCell>
                     <TableCell>
                       <Input
                         type="number"
                         value={exercise.sets}
+                        size="sm"
                         classNames={{
-                          input: "min-w-4",
+                          input: "min-w-0 w-16",
+                          base: "min-w-0 w-16",
                         }}
                         onChange={(e) =>
                           setWorkoutExercises((prev) =>
@@ -431,8 +440,10 @@ export default function EditWorkout() {
                       <Input
                         type="number"
                         value={exercise.reps}
+                        size="sm"
                         classNames={{
-                          input: "min-w-4",
+                          input: "min-w-0 w-16",
+                          base: "min-w-0 w-16",
                         }}
                         onChange={(e) =>
                           setWorkoutExercises((prev) =>
@@ -449,8 +460,10 @@ export default function EditWorkout() {
                       <Input
                         type="number"
                         value={exercise.weight}
+                        size="sm"
                         classNames={{
-                          input: "min-w-4",
+                          input: "min-w-0 w-16",
+                          base: "min-w-0 w-16",
                         }}
                         onChange={(e) =>
                           setWorkoutExercises((prev) =>
@@ -466,6 +479,7 @@ export default function EditWorkout() {
                     <TableCell>
                       <Button
                         color="danger"
+                        size="sm"
                         onPress={() =>
                           setWorkoutExercises((prev) =>
                             prev.filter((_, i) => i !== index)
@@ -481,17 +495,21 @@ export default function EditWorkout() {
             </Table>
           </div>
 
-          <div className="flex gap-4 mt-4">
-            <div>
-              <Button color="primary" onPress={onOpen}>
-                Add Exercise
-              </Button>
-            </div>
-            <div>
-              <Button color="secondary" onPress={onCustomOpen}>
-                Add Custom Exercise
-              </Button>
-            </div>
+          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <Button
+              color="primary"
+              onPress={onOpen}
+              className="w-full sm:w-auto"
+            >
+              Add Exercise
+            </Button>
+            <Button
+              color="secondary"
+              onPress={onCustomOpen}
+              className="w-full sm:w-auto"
+            >
+              Add Custom Exercise
+            </Button>
           </div>
 
           {/* Modal for Selecting Exercises - Updated for proper mobile centering */}
@@ -606,7 +624,7 @@ export default function EditWorkout() {
               )}
             </ModalContent>
           </Modal>
-          <div className="flex gap-4 mt-6">
+          <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full">
             <Button className="w-full" color="primary" type="submit">
               Save Changes
             </Button>
@@ -614,6 +632,7 @@ export default function EditWorkout() {
               as={Link}
               href={`/protected/workouts/${workoutId}`}
               variant="light"
+              className="w-full"
             >
               Cancel
             </Button>
