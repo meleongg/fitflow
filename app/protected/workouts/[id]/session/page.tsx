@@ -779,15 +779,22 @@ export default function WorkoutSession() {
                     aria-label={`${exercise.name} sets`}
                     classNames={{
                       wrapper: "min-w-full",
+                      table: "min-w-full",
                     }}
                   >
                     <TableHeader>
-                      <TableColumn className="w-[60px]">SET</TableColumn>
-                      <TableColumn className="w-[80px]">REPS</TableColumn>
-                      <TableColumn className="w-[100px]">
+                      <TableColumn className="w-[80px] sm:w-[90px]">
+                        SET
+                      </TableColumn>
+                      <TableColumn className="w-[110px] sm:w-[130px]">
+                        REPS
+                      </TableColumn>
+                      <TableColumn className="w-[110px] sm:w-[130px]">
                         WEIGHT ({useMetric ? "KG" : "LBS"})
                       </TableColumn>
-                      <TableColumn className="w-[130px]">STATUS</TableColumn>
+                      <TableColumn className="w-[130px] sm:w-[150px]">
+                        STATUS
+                      </TableColumn>
                     </TableHeader>
                     <TableBody>
                       {exercise.actualSets.map((set, setIndex) => (
@@ -795,25 +802,28 @@ export default function WorkoutSession() {
                           <TableCell className="text-center">
                             {set.setNumber}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="p-2">
                             <Input
                               type="number"
                               value={String(set.reps)}
-                              size="sm"
+                              size="md"
+                              min={0}
                               classNames={{
-                                input: "text-right",
-                                base: "min-w-0 w-16",
+                                base: "min-w-0 max-w-[100px]",
+                                input: "text-center",
+                                innerWrapper: "h-9",
                               }}
                               onChange={(e) => {
+                                const newValue = parseInt(e.target.value) || 0;
                                 const newExercises = [...sessionExercises];
                                 newExercises[exerciseIndex].actualSets[
                                   setIndex
-                                ].reps = Number(e.target.value);
+                                ].reps = newValue;
                                 setSessionExercises(newExercises);
                               }}
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="p-2">
                             <Input
                               type="number"
                               value={
@@ -821,17 +831,19 @@ export default function WorkoutSession() {
                                   ? String(set.weight)
                                   : String(kgToLbs(set.weight).toFixed(1))
                               }
-                              size="sm"
+                              size="md"
+                              min={0}
                               classNames={{
-                                input: "text-right",
-                                base: "min-w-0 w-16",
+                                base: "min-w-0 max-w-[100px]",
+                                input: "text-center",
+                                innerWrapper: "h-9",
                               }}
                               onChange={(e) => {
-                                const newExercises = [...sessionExercises];
-                                const inputValue = Number(e.target.value);
+                                const inputValue = Number(e.target.value) || 0;
                                 const storageValue = useMetric
                                   ? inputValue
                                   : lbsToKg(inputValue);
+                                const newExercises = [...sessionExercises];
                                 newExercises[exerciseIndex].actualSets[
                                   setIndex
                                 ].weight = storageValue;
@@ -839,7 +851,7 @@ export default function WorkoutSession() {
                               }}
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="p-2">
                             <Button
                               color={set.completed ? "success" : "primary"}
                               size="sm"

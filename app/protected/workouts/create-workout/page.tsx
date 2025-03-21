@@ -23,9 +23,17 @@ import {
   TableRow,
   useDisclosure,
 } from "@nextui-org/react";
+import { Trash2 } from "lucide-react"; // Import Trash2 icon from lucide-react
 import { useEffect, useState } from "react";
+// 1. Import the useUnitPreference hook
+import { useUnitPreference } from "@/hooks/useUnitPreference";
+// 1. Import your units helper functions
+import { convertToStorageUnit, kgToLbs } from "@/utils/units";
 
 export default function CreateWorkout() {
+  // 2. Use the hook at the top of your component
+  const { useMetric, isLoading } = useUnitPreference();
+
   const [workoutExercises, setWorkoutExercises] = useState<any[]>([]);
   const [exercises, setExercises] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -408,73 +416,96 @@ export default function CreateWorkout() {
             >
               <TableHeader>
                 <TableColumn>NAME</TableColumn>
-                <TableColumn className="w-[70px]">SETS</TableColumn>
-                <TableColumn className="w-[70px]">REPS</TableColumn>
-                <TableColumn className="w-[80px]">WEIGHT</TableColumn>
-                <TableColumn className="w-[90px]">ACTIONS</TableColumn>
+                <TableColumn className="w-[110px] sm:w-[130px]">
+                  SETS
+                </TableColumn>
+                <TableColumn className="w-[110px] sm:w-[130px]">
+                  REPS
+                </TableColumn>
+                <TableColumn className="w-[120px] sm:w-[150px]">
+                  WEIGHT {!isLoading && `(${useMetric ? "KG" : "LBS"})`}
+                </TableColumn>
+                <TableColumn className="w-[100px] sm:w-[120px]">
+                  ACTIONS
+                </TableColumn>
               </TableHeader>
               <TableBody>
                 {workoutExercises.map((exercise, index) => (
                   <TableRow key={index}>
                     <TableCell>{exercise.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="p-2">
                       <Input
                         type="number"
                         value={exercise.sets}
-                        size="sm"
+                        size="md"
+                        min={1}
                         classNames={{
-                          base: "min-w-0 max-w-[60px]",
-                          input: "text-right px-1",
+                          base: "min-w-0 max-w-[100px]", // Increased width
+                          input: "text-center", // Center alignment
+                          innerWrapper: "h-9",
                         }}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const newValue = parseInt(e.target.value) || 1;
                           setWorkoutExercises((prev) =>
                             prev.map((ex, i) =>
-                              i === index
-                                ? { ...ex, sets: +e.target.value }
-                                : ex
+                              i === index ? { ...ex, sets: newValue } : ex
                             )
-                          )
-                        }
+                          );
+                        }}
                       />
                     </TableCell>
-                    <TableCell>
+
+                    <TableCell className="p-2">
                       <Input
                         type="number"
                         value={exercise.reps}
-                        size="sm"
+                        size="md"
+                        min={1}
                         classNames={{
-                          base: "min-w-0 max-w-[60px]",
-                          input: "text-right px-1",
+                          base: "min-w-0 max-w-[100px]",
+                          input: "text-center",
+                          innerWrapper: "h-9",
                         }}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const newValue = parseInt(e.target.value) || 1;
                           setWorkoutExercises((prev) =>
                             prev.map((ex, i) =>
-                              i === index
-                                ? { ...ex, reps: +e.target.value }
-                                : ex
+                              i === index ? { ...ex, reps: newValue } : ex
                             )
-                          )
-                        }
+                          );
+                        }}
                       />
                     </TableCell>
-                    <TableCell>
+
+                    <TableCell className="p-2">
                       <Input
                         type="number"
-                        value={exercise.weight}
-                        size="sm"
+                        value={
+                          useMetric
+                            ? exercise.weight
+                            : kgToLbs(exercise.weight).toFixed(1)
+                        } // Convert to lbs for display if needed
+                        size="md"
+                        min={0} // Weight can be 0
                         classNames={{
-                          base: "min-w-0 max-w-[60px]",
-                          input: "text-right px-1",
+                          base: "min-w-0 max-w-[100px]", // Increased width
+                          input: "text-center", // Center alignment
+                          innerWrapper: "h-9",
                         }}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const inputValue = Number(e.target.value) || 0;
+                          // Convert to kg for storage if user is in lbs mode
+                          const weightInKg = convertToStorageUnit(
+                            inputValue,
+                            useMetric
+                          );
+
                           setWorkoutExercises((prev) =>
                             prev.map((ex, i) =>
-                              i === index
-                                ? { ...ex, weight: +e.target.value }
-                                : ex
+                              i === index ? { ...ex, weight: weightInKg } : ex
                             )
-                          )
-                        }
+                          );
+                        }}
                       />
                     </TableCell>
                     <TableCell>
@@ -721,30 +752,10 @@ export default function CreateWorkout() {
             <Button
               type="reset"
               variant="bordered"
-              className="w-full sm:w-auto"
-              startContent={
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M15 9L9 15M9 9L15 15"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              }
+              className="w-full sm:min-w-[120px] sm:w-auto flex items-center justify-center"
+              startContent={<Trash2 className="h-4 w-4 mr-1 flex-shrink-0" />}
             >
-              Clear All
+              <span>Clear All</span>
             </Button>
           </div>
         </div>
