@@ -49,6 +49,16 @@ export default function CreateWorkout() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
+  // Add this state for the custom exercise form error
+  const [customExerciseError, setCustomExerciseError] = useState<string | null>(
+    null
+  );
+
+  // 1. Add state to track existing workout names
+  const [existingWorkoutNames, setExistingWorkoutNames] = useState<string[]>(
+    []
+  );
+
   // Fetch paginated exercises
   const fetchExercises = async (
     page: number,
@@ -112,8 +122,40 @@ export default function CreateWorkout() {
     fetchCategories();
   }, []);
 
+  // 2. Update the useEffect to fetch existing workout names
   useEffect(() => {
-    // TODO: Fetch existing workout names and check for duplicates
+    const fetchExistingWorkoutNames = async () => {
+      try {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+          console.error("Auth error:", authError);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("workouts")
+          .select("name")
+          .eq("user_id", user.id);
+
+        if (error) {
+          console.error("Error fetching workout names:", error);
+          return;
+        }
+
+        // Extract all workout names to an array
+        setExistingWorkoutNames(
+          data.map((workout) => workout.name.toLowerCase())
+        );
+      } catch (err) {
+        console.error("Error fetching workout names:", err);
+      }
+    };
+
+    fetchExistingWorkoutNames();
   }, []);
 
   const handleAddExercise = (exercise: any) => {
@@ -130,12 +172,15 @@ export default function CreateWorkout() {
     onClose();
   };
 
+  // Update the handleCustomExerciseSubmit function to check for duplicates
   const handleCustomExerciseSubmit = async (
     e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
-    // Explicitly stop propagation to parent form
     e.stopPropagation();
+
+    // Reset error state
+    setCustomExerciseError(null);
 
     const data = Object.fromEntries(
       new FormData(e.currentTarget as HTMLFormElement)
@@ -157,15 +202,32 @@ export default function CreateWorkout() {
         throw new Error("No authenticated user found");
       }
 
-      // Insert the custom exercise into the exercises table
+      // Check if any exercise with this name already exists (custom or default)
+      const { data: existingExercises, error: searchError } = await supabase
+        .from("exercises")
+        .select("id, name")
+        .ilike("name", exerciseName as string);
+
+      if (searchError) {
+        console.error("Error checking for existing exercises:", searchError);
+        return;
+      }
+
+      // If we found an exercise with the same name
+      if (existingExercises && existingExercises.length > 0) {
+        setCustomExerciseError("An exercise with this name already exists");
+        return;
+      }
+
+      // Continue with exercise creation since no duplicate was found
       const { data: insertedExercise, error } = await supabase
         .from("exercises")
         .insert({
           name: exerciseName,
           category_id: selectedCategory || null,
           description: exerciseDescription || null,
-          user_id: user.id, // Use the user's ID as the foreign key
-          is_default: false, // Mark it as a custom (non-default) exercise
+          user_id: user.id,
+          is_default: false,
         })
         .select()
         .single();
@@ -175,7 +237,7 @@ export default function CreateWorkout() {
         return;
       }
 
-      // Call handleAddExercise to update the page
+      // Add exercise to table and close modal
       handleAddExercise({
         id: insertedExercise.id,
         name: insertedExercise.name,
@@ -184,7 +246,7 @@ export default function CreateWorkout() {
         is_default: insertedExercise.is_default,
       });
 
-      // Remove alert and just close the modal
+      // Close the modal
       onCustomClose();
 
       // Refresh exercises list in background
@@ -194,6 +256,7 @@ export default function CreateWorkout() {
     }
   };
 
+  // 3. Update the onWorkoutSubmit function to check for duplicates
   const onWorkoutSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -202,7 +265,14 @@ export default function CreateWorkout() {
     );
     const { name: workoutName, description: workoutDescription } = data;
 
+    // Reset errors
     setErrors({});
+
+    // Check for duplicate workout name
+    if (existingWorkoutNames.includes(workoutName.toString().toLowerCase())) {
+      setErrors({ name: "A workout with this name already exists" });
+      return; // Stop the submission if duplicate found
+    }
 
     try {
       // Get the authenticated user
@@ -307,12 +377,14 @@ export default function CreateWorkout() {
               if (validationDetails.valueMissing) {
                 return "Please enter workout name";
               }
-              return errors.name;
+              return errors.name; // This will show our duplicate name error
             }}
             label="Name"
             labelPlacement="outside"
             name="name"
             placeholder="Enter workout name"
+            isInvalid={!!errors.name} // Add this to show the error state
+            onChange={() => errors.name && setErrors({})} // Clear error when user changes input
           />
 
           <Input
@@ -489,6 +561,7 @@ export default function CreateWorkout() {
 
                       {/* Category filter */}
                       <Select
+                        aria-label="Filter exercises by category"
                         placeholder="Filter by category"
                         selectedKeys={[categoryFilter]}
                         onChange={(e) => setCategoryFilter(e.target.value)}
@@ -593,6 +666,11 @@ export default function CreateWorkout() {
                         label="Exercise Name"
                         name="exerciseName"
                         placeholder="Enter exercise name"
+                        isInvalid={!!customExerciseError}
+                        errorMessage={customExerciseError}
+                        onChange={() =>
+                          customExerciseError && setCustomExerciseError(null)
+                        } // Clear error when user types
                       />
 
                       {/* Dropdown for categories */}

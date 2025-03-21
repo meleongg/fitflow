@@ -154,6 +154,11 @@ export default function WorkoutSession() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
+  // 1. Add custom exercise error state
+  const [customExerciseError, setCustomExerciseError] = useState<string | null>(
+    null
+  );
+
   // Fetch user data on component mount
   useEffect(() => {
     const fetchUser = async () => {
@@ -320,12 +325,15 @@ export default function WorkoutSession() {
     }
   }, [workoutExercises, activeSession]);
 
+  // 2. Update the handleCustomExerciseSubmit function to check for duplicates
   const handleCustomExerciseSubmit = async (
     e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
-    // Explicitly stop propagation to parent form
     e.stopPropagation();
+
+    // Reset error state
+    setCustomExerciseError(null);
 
     const data = Object.fromEntries(
       new FormData(e.currentTarget as HTMLFormElement)
@@ -347,7 +355,24 @@ export default function WorkoutSession() {
         throw new Error("No authenticated user found");
       }
 
-      // Insert the custom exercise into the exercises table
+      // Check if any exercise with this name already exists (custom or default)
+      const { data: existingExercises, error: searchError } = await supabase
+        .from("exercises")
+        .select("id, name")
+        .ilike("name", exerciseName as string);
+
+      if (searchError) {
+        console.error("Error checking for existing exercises:", searchError);
+        return;
+      }
+
+      // If we found an exercise with the same name
+      if (existingExercises && existingExercises.length > 0) {
+        setCustomExerciseError("An exercise with this name already exists");
+        return;
+      }
+
+      // Continue with exercise creation since no duplicate was found
       const { data: insertedExercise, error } = await supabase
         .from("exercises")
         .insert({
@@ -365,7 +390,7 @@ export default function WorkoutSession() {
         return;
       }
 
-      // Call handleAddExercise to update the page
+      // Add exercise to table and close modal
       handleAddExercise({
         id: insertedExercise.id,
         name: insertedExercise.name,
@@ -374,7 +399,7 @@ export default function WorkoutSession() {
         is_default: insertedExercise.is_default,
       });
 
-      // Remove alert and just close the modal
+      // Close the modal
       onCustomClose();
 
       // Refresh exercises list in background
@@ -600,13 +625,13 @@ export default function WorkoutSession() {
 
                       {/* Category filter */}
                       <Select
+                        label="Category" // Add this line to provide a visible label
                         placeholder="Filter by category"
                         selectedKeys={[categoryFilter]}
                         onChange={(e) => setCategoryFilter(e.target.value)}
                         className="sm:w-1/3"
                         size="sm"
                       >
-                        {/* Use proper React Fragment to avoid type errors */}
                         <>
                           <SelectItem key="all" value="all">
                             All Categories
@@ -670,6 +695,11 @@ export default function WorkoutSession() {
                         label="Exercise Name"
                         name="exerciseName"
                         placeholder="Enter exercise name"
+                        isInvalid={!!customExerciseError}
+                        errorMessage={customExerciseError}
+                        onChange={() =>
+                          customExerciseError && setCustomExerciseError(null)
+                        }
                       />
 
                       {/* Dropdown for categories */}
@@ -703,6 +733,11 @@ export default function WorkoutSession() {
                         Add Exercise
                       </Button>
                     </form>
+                    {customExerciseError && (
+                      <div className="text-red-500 mt-2">
+                        {customExerciseError}
+                      </div>
+                    )}
                   </ModalBody>
                   <ModalFooter>
                     <Button color="secondary" onPress={onCustomClose}>
