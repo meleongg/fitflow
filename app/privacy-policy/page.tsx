@@ -1,10 +1,12 @@
-import PageTitle from "@/components/ui/page-title";
 import Link from "next/link";
 
 export default function PrivacyPolicy() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <PageTitle title="Privacy Policy" />
+      {/* Simple header instead of PageTitle component */}
+      <h1 className="font-bold text-2xl sm:text-3xl md:text-4xl mb-6">
+        Privacy Policy
+      </h1>
 
       <div className="bg-white p-6 rounded-lg shadow-md">
         <div className="prose max-w-none">

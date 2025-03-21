@@ -76,7 +76,7 @@ export default async function Signup(props: {
               </p>
             </div>
 
-            {/* Add Terms Agreement Checkbox */}
+            {/* Add Terms Agreement Checkbox with Required Indicator */}
             <div className="mt-3">
               <div className="flex items-start">
                 <input
@@ -106,7 +106,15 @@ export default async function Signup(props: {
                   >
                     Privacy Policy
                   </Link>
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
+              </div>
+              <div
+                className="text-xs text-red-500 mt-1 hidden"
+                id="terms-error"
+              >
+                You must agree to the Terms of Service and Privacy Policy to
+                continue
               </div>
             </div>
 

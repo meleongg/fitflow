@@ -201,12 +201,18 @@ export default async function Home() {
                 © 2025 FitFlow. All rights reserved.
               </p>
               <div className="flex gap-4">
-                <a href="#" className="text-gray-700 hover:text-primary">
+                <Link
+                  href="/privacy-policy"
+                  className="text-gray-700 hover:text-primary"
+                >
                   Privacy Policy
-                </a>
-                <a href="#" className="text-gray-700 hover:text-primary">
+                </Link>
+                <Link
+                  href="/terms-of-service"
+                  className="text-gray-700 hover:text-primary"
+                >
                   Terms of Service
-                </a>
+                </Link>
               </div>
             </div>
           </div>
