@@ -324,6 +324,8 @@ export default function WorkoutSession() {
     e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
+    // Explicitly stop propagation to parent form
+    e.stopPropagation();
 
     const data = Object.fromEntries(
       new FormData(e.currentTarget as HTMLFormElement)
@@ -352,8 +354,8 @@ export default function WorkoutSession() {
           name: exerciseName,
           category_id: selectedCategory || null,
           description: exerciseDescription || null,
-          user_id: user.id, // Use the user's ID as the foreign key
-          is_default: false, // Mark it as a custom (non-default) exercise
+          user_id: user.id,
+          is_default: false,
         })
         .select()
         .single();
@@ -372,9 +374,11 @@ export default function WorkoutSession() {
         is_default: insertedExercise.is_default,
       });
 
-      alert("Custom exercise added successfully!");
+      // Remove alert and just close the modal
       onCustomClose();
-      fetchExercises(currentPage); // Refresh the exercises list
+
+      // Refresh exercises list in background
+      fetchExercises(currentPage);
     } catch (error: any) {
       console.error("Error:", error.message);
     }
@@ -657,8 +661,7 @@ export default function WorkoutSession() {
                       will add it to your Exercise Library.
                     </div>
 
-                    {/* Add your form inputs for creating a custom exercise */}
-                    <Form
+                    <form
                       onSubmit={handleCustomExerciseSubmit}
                       className="space-y-4"
                     >
@@ -680,11 +683,13 @@ export default function WorkoutSession() {
                         }
                         name="exerciseCategory"
                       >
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
+                        <>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </>
                       </Select>
 
                       <Input
@@ -697,7 +702,7 @@ export default function WorkoutSession() {
                       <Button type="submit" color="primary" className="w-full">
                         Add Exercise
                       </Button>
-                    </Form>
+                    </form>
                   </ModalBody>
                   <ModalFooter>
                     <Button color="secondary" onPress={onCustomClose}>

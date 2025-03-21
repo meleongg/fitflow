@@ -43,7 +43,6 @@ export default function CreateWorkout() {
   const [selectedCategory, setSelectedCategory] = useState<number>();
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [submitted, setSubmitted] = useState<any>(null);
   const supabase = createClient();
   const PAGE_SIZE = 5;
 
@@ -135,6 +134,8 @@ export default function CreateWorkout() {
     e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
+    // Explicitly stop propagation to parent form
+    e.stopPropagation();
 
     const data = Object.fromEntries(
       new FormData(e.currentTarget as HTMLFormElement)
@@ -183,9 +184,11 @@ export default function CreateWorkout() {
         is_default: insertedExercise.is_default,
       });
 
-      alert("Custom exercise added successfully!");
+      // Remove alert and just close the modal
       onCustomClose();
-      fetchExercises(currentPage); // Refresh the exercises list
+
+      // Refresh exercises list in background
+      fetchExercises(currentPage);
     } catch (error: any) {
       console.error("Error:", error.message);
     }
@@ -253,19 +256,17 @@ export default function CreateWorkout() {
         return;
       }
 
-      alert("Workout and exercises successfully created!");
       setWorkoutExercises([]); // Clear exercises after submission
-      // e.currentTarget.reset(); // Reset form fields
+      e.currentTarget.reset(); // Reset form fields
 
-      // TODO: Redirect to the workout details page
-      // TODO: Add a toast notification for successful submission
+      // Redirect to the workouts list page
+      window.location.href = "/protected/workouts";
     } catch (error: any) {
       console.error("Unexpected Error", error);
     }
 
     // Clear errors and submit
     setErrors({});
-    setSubmitted(data);
   };
 
   const handleOpenModal = () => {
@@ -276,28 +277,36 @@ export default function CreateWorkout() {
   };
 
   return (
-    <>
+    <div className="w-full max-w-full overflow-x-hidden">
       <PageTitle title="New Workout" />
 
-      <div className="flex items-center">
+      <div className="flex items-center mb-4">
         <BackButton url="/protected/workouts" />
       </div>
 
       <Form
-        className="max-w-full justify-center items-center space-y-4"
+        className="w-full max-w-full justify-center items-center space-y-4"
         validationBehavior="native"
         validationErrors={errors}
-        onReset={() => setSubmitted(null)}
+        onReset={() => {
+          // Clear errors
+          setErrors({});
+
+          // Clear all workout exercises
+          setWorkoutExercises([]);
+
+          // Reset selected category if needed
+          setSelectedCategory(undefined);
+        }}
         onSubmit={onWorkoutSubmit}
       >
-        <div className="flex flex-col gap-4 max-w-md">
+        <div className="flex flex-col gap-4 w-full max-w-md">
           <Input
             isRequired
             errorMessage={({ validationDetails }) => {
               if (validationDetails.valueMissing) {
                 return "Please enter workout name";
               }
-
               return errors.name;
             }}
             label="Name"
@@ -314,16 +323,23 @@ export default function CreateWorkout() {
             type="text"
           />
 
-          <h2>Exercises</h2>
+          <h2 className="text-lg font-semibold mt-2">Exercises</h2>
 
-          <div className="w-full">
-            <Table aria-label="Exercise table">
+          {/* Mobile-friendly table container */}
+          <div className="w-full overflow-x-auto -mx-2 px-2">
+            <Table
+              aria-label="Exercise table"
+              classNames={{
+                base: "min-w-full",
+                table: "min-w-full",
+              }}
+            >
               <TableHeader>
                 <TableColumn>NAME</TableColumn>
-                <TableColumn>SETS</TableColumn>
-                <TableColumn>REPS</TableColumn>
-                <TableColumn>WEIGHT</TableColumn>
-                <TableColumn>ACTIONS</TableColumn>
+                <TableColumn className="w-[70px]">SETS</TableColumn>
+                <TableColumn className="w-[70px]">REPS</TableColumn>
+                <TableColumn className="w-[80px]">WEIGHT</TableColumn>
+                <TableColumn className="w-[90px]">ACTIONS</TableColumn>
               </TableHeader>
               <TableBody>
                 {workoutExercises.map((exercise, index) => (
@@ -333,8 +349,10 @@ export default function CreateWorkout() {
                       <Input
                         type="number"
                         value={exercise.sets}
+                        size="sm"
                         classNames={{
-                          input: "min-w-4",
+                          base: "min-w-0 max-w-[60px]",
+                          input: "text-right px-1",
                         }}
                         onChange={(e) =>
                           setWorkoutExercises((prev) =>
@@ -351,8 +369,10 @@ export default function CreateWorkout() {
                       <Input
                         type="number"
                         value={exercise.reps}
+                        size="sm"
                         classNames={{
-                          input: "min-w-4",
+                          base: "min-w-0 max-w-[60px]",
+                          input: "text-right px-1",
                         }}
                         onChange={(e) =>
                           setWorkoutExercises((prev) =>
@@ -369,8 +389,10 @@ export default function CreateWorkout() {
                       <Input
                         type="number"
                         value={exercise.weight}
+                        size="sm"
                         classNames={{
-                          input: "min-w-4",
+                          base: "min-w-0 max-w-[60px]",
+                          input: "text-right px-1",
                         }}
                         onChange={(e) =>
                           setWorkoutExercises((prev) =>
@@ -386,6 +408,7 @@ export default function CreateWorkout() {
                     <TableCell>
                       <Button
                         color="danger"
+                        size="sm"
                         onPress={() =>
                           setWorkoutExercises((prev) =>
                             prev.filter((_, i) => i !== index)
@@ -401,17 +424,13 @@ export default function CreateWorkout() {
             </Table>
           </div>
 
-          <div className="flex gap-4 mt-4">
-            <div>
-              <Button color="primary" onPress={handleOpenModal}>
-                Add Exercise
-              </Button>
-            </div>
-            <div>
-              <Button color="secondary" onPress={onCustomOpen}>
-                Add Custom Exercise
-              </Button>
-            </div>
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Button color="primary" onPress={handleOpenModal}>
+              Add Exercise
+            </Button>
+            <Button color="secondary" onPress={onCustomOpen}>
+              Add Custom Exercise
+            </Button>
           </div>
 
           {/* Updated Modal for Selecting Exercises */}
@@ -565,8 +584,7 @@ export default function CreateWorkout() {
                       will add it to your Exercise Library.
                     </div>
 
-                    {/* Add your form inputs for creating a custom exercise */}
-                    <Form
+                    <form
                       onSubmit={handleCustomExerciseSubmit}
                       className="space-y-4"
                     >
@@ -607,7 +625,7 @@ export default function CreateWorkout() {
                       <Button type="submit" color="primary" className="w-full">
                         Add Exercise
                       </Button>
-                    </Form>
+                    </form>
                   </ModalBody>
                   <ModalFooter>
                     <Button color="secondary" onPress={onCustomClose}>
@@ -618,22 +636,41 @@ export default function CreateWorkout() {
               )}
             </ModalContent>
           </Modal>
-          <div className="flex gap-4 mt-6">
+          <div className="flex flex-col sm:flex-row gap-2 mt-6 w-full">
             <Button className="w-full" color="primary" type="submit">
               Submit
             </Button>
-            <Button type="reset" variant="bordered">
-              Reset
+            <Button
+              type="reset"
+              variant="bordered"
+              className="w-full sm:w-auto"
+              startContent={
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M15 9L9 15M9 9L15 15"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              }
+            >
+              Clear All
             </Button>
           </div>
         </div>
-
-        {submitted && (
-          <div className="text-small text-default-500 mt-4">
-            Submitted data: <pre>{JSON.stringify(submitted, null, 2)}</pre>
-          </div>
-        )}
       </Form>
-    </>
+    </div>
   );
 }
