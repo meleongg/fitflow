@@ -76,6 +76,40 @@ export default async function Signup(props: {
               </p>
             </div>
 
+            {/* Add Terms Agreement Checkbox */}
+            <div className="mt-3">
+              <div className="flex items-start">
+                <input
+                  type="checkbox"
+                  id="terms-agreement"
+                  name="terms-agreement"
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  required
+                />
+                <label
+                  htmlFor="terms-agreement"
+                  className="ml-2 text-xs text-gray-700"
+                >
+                  I have read and agree to the{" "}
+                  <Link
+                    href="/terms-of-service"
+                    className="text-primary hover:underline"
+                    target="_blank"
+                  >
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/privacy-policy"
+                    className="text-primary hover:underline"
+                    target="_blank"
+                  >
+                    Privacy Policy
+                  </Link>
+                </label>
+              </div>
+            </div>
+
             <SubmitButton
               pendingText="Signing up..."
               formAction={signUpAction}
