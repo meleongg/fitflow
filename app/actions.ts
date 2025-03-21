@@ -23,10 +23,6 @@ export const signUpAction = async (formData: FormData) => {
   const { error: signUpError, data } = await supabase.auth.signUp({
     email,
     password,
-    // Remove or comment out the email redirect option
-    // options: {
-    //   emailRedirectTo: `${origin}/auth/callback`,
-    // }
   });
 
   if (signUpError) {
@@ -34,7 +30,26 @@ export const signUpAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-up", signUpError.message);
   }
 
-  // 2. Immediately sign them in after signup
+  // 2. Create default user preferences
+  if (data.user) {
+    const { error: prefsError } = await supabase
+      .from("user_preferences")
+      .insert({
+        user_id: data.user.id,
+        use_metric: false, // false = lbs (imperial units)
+        use_dark_mode: false, // light mode default
+        enable_notifications: false,
+        default_rest_timer: 60, // 60 seconds
+        enable_sounds: false,
+      });
+
+    if (prefsError) {
+      console.error("Failed to create user preferences:", prefsError);
+      // Continue anyway - this shouldn't block signup
+    }
+  }
+
+  // 3. Immediately sign them in after signup
   const { error: signInError } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -44,15 +59,8 @@ export const signUpAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-up", signInError.message);
   }
 
-  // 3. Redirect them directly to the app
+  // 4. Redirect them directly to the app
   return redirect("/protected");
-
-  // Comment out or remove this success message
-  // return encodedRedirect(
-  //   "success",
-  //   "/sign-up",
-  //   "Thanks for signing up! Please check your email for a verification link.",
-  // );
 };
 
 export const signInAction = async (formData: FormData) => {
