@@ -47,14 +47,35 @@ export default function CreateWorkout() {
   const supabase = createClient();
   const PAGE_SIZE = 5;
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
   // Fetch paginated exercises
-  const fetchExercises = async (page: number) => {
-    const { data, error, count } = await supabase
+  const fetchExercises = async (
+    page: number,
+    query: string = "",
+    categoryId: string = "all"
+  ) => {
+    let exerciseQuery = supabase
       .from("exercises")
       .select("id, name, description, category_id, categories (name)", {
         count: "exact",
-      })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+      });
+
+    // Add search filter if query exists
+    if (query) {
+      exerciseQuery = exerciseQuery.ilike("name", `%${query}%`);
+    }
+
+    // Add category filter if not "all"
+    if (categoryId !== "all") {
+      exerciseQuery = exerciseQuery.eq("category_id", categoryId);
+    }
+
+    const { data, error, count } = await exerciseQuery.range(
+      (page - 1) * PAGE_SIZE,
+      page * PAGE_SIZE - 1
+    );
 
     if (error) {
       console.error("Error fetching exercises:", error);
@@ -65,8 +86,12 @@ export default function CreateWorkout() {
   };
 
   useEffect(() => {
-    fetchExercises(currentPage);
-  }, [currentPage]);
+    const timer = setTimeout(() => {
+      fetchExercises(currentPage, searchQuery, categoryFilter);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [currentPage, searchQuery, categoryFilter]);
 
   // Fetch categories on page load
   useEffect(() => {
@@ -243,6 +268,13 @@ export default function CreateWorkout() {
     setSubmitted(data);
   };
 
+  const handleOpenModal = () => {
+    setSearchQuery("");
+    setCategoryFilter("all");
+    setCurrentPage(1); // Reset to first page
+    onOpen();
+  };
+
   return (
     <>
       <PageTitle title="New Workout" />
@@ -275,19 +307,10 @@ export default function CreateWorkout() {
           />
 
           <Input
-            isRequired
-            errorMessage={({ validationDetails }) => {
-              if (validationDetails.valueMissing) {
-                return "Please enter a description";
-              }
-              if (validationDetails.typeMismatch) {
-                return "Please enter a valid description";
-              }
-            }}
             label="Description"
             labelPlacement="outside"
             name="description"
-            placeholder="Enter workout description"
+            placeholder="Enter workout description (optional)"
             type="text"
           />
 
@@ -380,7 +403,7 @@ export default function CreateWorkout() {
 
           <div className="flex gap-4 mt-4">
             <div>
-              <Button color="primary" onPress={onOpen}>
+              <Button color="primary" onPress={handleOpenModal}>
                 Add Exercise
               </Button>
             </div>
@@ -412,6 +435,61 @@ export default function CreateWorkout() {
                     <h3 className="text-lg font-bold">Select Exercise</h3>
                   </ModalHeader>
                   <ModalBody>
+                    <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                      {/* Search input */}
+                      <Input
+                        type="search"
+                        placeholder="Search exercises..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="flex-1"
+                        startContent={
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                          >
+                            <path
+                              d="M6.5 12C9.53757 12 12 9.53757 12 6.5C12 3.46243 9.53757 1 6.5 1C3.46243 1 1 3.46243 1 6.5C1 9.53757 3.46243 12 6.5 12Z"
+                              stroke="currentColor"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M11 11L15 15"
+                              stroke="currentColor"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        }
+                        isClearable
+                        onClear={() => setSearchQuery("")}
+                      />
+
+                      {/* Category filter */}
+                      <Select
+                        placeholder="Filter by category"
+                        selectedKeys={[categoryFilter]}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="sm:w-1/3"
+                        size="sm"
+                      >
+                        <>
+                          <SelectItem key="all" value="all">
+                            All Categories
+                          </SelectItem>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </>
+                      </Select>
+                    </div>
+
+                    {/* Table content remains the same */}
                     <Table
                       aria-label="Available Exercises"
                       classNames={{
@@ -443,10 +521,11 @@ export default function CreateWorkout() {
                         ))}
                       </TableBody>
                     </Table>
+
                     <Pagination
                       total={totalPages}
                       initialPage={currentPage}
-                      size="sm" // Smaller pagination on mobile
+                      size="sm"
                       onChange={(page) => setCurrentPage(page)}
                     />
                   </ModalBody>
@@ -509,11 +588,13 @@ export default function CreateWorkout() {
                         }
                         name="exerciseCategory"
                       >
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
+                        <>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </>
                       </Select>
 
                       <Input
