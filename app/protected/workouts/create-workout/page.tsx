@@ -29,8 +29,11 @@ import { useEffect, useState } from "react";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 // 1. Import your units helper functions
 import { convertToStorageUnit, kgToLbs } from "@/utils/units";
+// Add import at the top
+import { useRouter } from "next/navigation";
 
 export default function CreateWorkout() {
+  const router = useRouter();
   // 2. Use the hook at the top of your component
   const { useMetric, isLoading } = useUnitPreference();
 
@@ -337,8 +340,8 @@ export default function CreateWorkout() {
       setWorkoutExercises([]); // Clear exercises after submission
       e.currentTarget.reset(); // Reset form fields
 
-      // Redirect to the workouts list page
-      window.location.href = "/protected/workouts";
+      // Use Next.js router instead of window.location
+      router.push("/protected/workouts");
     } catch (error: any) {
       console.error("Unexpected Error", error);
     }
@@ -416,16 +419,16 @@ export default function CreateWorkout() {
             >
               <TableHeader>
                 <TableColumn>NAME</TableColumn>
-                <TableColumn className="w-[110px] sm:w-[130px]">
+                <TableColumn className="w-[120px] min-w-[120px]">
                   SETS
                 </TableColumn>
-                <TableColumn className="w-[110px] sm:w-[130px]">
+                <TableColumn className="w-[120px] min-w-[120px]">
                   REPS
                 </TableColumn>
-                <TableColumn className="w-[120px] sm:w-[150px]">
+                <TableColumn className="w-[140px] min-w-[140px]">
                   WEIGHT {!isLoading && `(${useMetric ? "KG" : "LBS"})`}
                 </TableColumn>
-                <TableColumn className="w-[100px] sm:w-[120px]">
+                <TableColumn className="w-[100px] min-w-[100px]">
                   ACTIONS
                 </TableColumn>
               </TableHeader>
@@ -435,16 +438,43 @@ export default function CreateWorkout() {
                     <TableCell>{exercise.name}</TableCell>
                     <TableCell className="p-2">
                       <Input
-                        type="number"
-                        value={exercise.sets}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={String(exercise.sets)} // Convert to string to handle empty case
                         size="md"
-                        min={1}
                         classNames={{
-                          base: "min-w-0 max-w-[100px]", // Increased width
-                          input: "text-center", // Center alignment
+                          base: "min-w-[80px] w-[80px]",
+                          input: "text-center px-0",
                           innerWrapper: "h-9",
                         }}
                         onChange={(e) => {
+                          const inputValue = e.target.value;
+
+                          // Important: Allow EMPTY input by updating state with empty string
+                          if (inputValue === "") {
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, sets: "" } : ex
+                              )
+                            );
+                            return;
+                          }
+
+                          // Only allow digits
+                          if (!/^\d+$/.test(inputValue)) {
+                            return;
+                          }
+
+                          const newValue = parseInt(inputValue);
+                          setWorkoutExercises((prev) =>
+                            prev.map((ex, i) =>
+                              i === index ? { ...ex, sets: newValue } : ex
+                            )
+                          );
+                        }}
+                        onBlur={(e) => {
+                          // When focus leaves, ensure valid value (min 1)
                           const newValue = parseInt(e.target.value) || 1;
                           setWorkoutExercises((prev) =>
                             prev.map((ex, i) =>
@@ -457,16 +487,43 @@ export default function CreateWorkout() {
 
                     <TableCell className="p-2">
                       <Input
-                        type="number"
-                        value={exercise.reps}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={String(exercise.reps)} // Convert to string to handle empty case
                         size="md"
-                        min={1}
                         classNames={{
-                          base: "min-w-0 max-w-[100px]",
-                          input: "text-center",
+                          base: "min-w-[80px] w-[80px]",
+                          input: "text-center px-0",
                           innerWrapper: "h-9",
                         }}
                         onChange={(e) => {
+                          const inputValue = e.target.value;
+
+                          // Important: Allow EMPTY input by updating state with empty string
+                          if (inputValue === "") {
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, reps: "" } : ex
+                              )
+                            );
+                            return;
+                          }
+
+                          // Only allow digits
+                          if (!/^\d+$/.test(inputValue)) {
+                            return;
+                          }
+
+                          const newValue = parseInt(inputValue);
+                          setWorkoutExercises((prev) =>
+                            prev.map((ex, i) =>
+                              i === index ? { ...ex, reps: newValue } : ex
+                            )
+                          );
+                        }}
+                        onBlur={(e) => {
+                          // When focus leaves, ensure valid value (min 1)
                           const newValue = parseInt(e.target.value) || 1;
                           setWorkoutExercises((prev) =>
                             prev.map((ex, i) =>
@@ -479,24 +536,68 @@ export default function CreateWorkout() {
 
                     <TableCell className="p-2">
                       <Input
-                        type="number"
+                        type="text" // Keep as text
+                        inputMode="numeric"
+                        pattern="[0-9.]*"
+                        // Key change: Don't format the value if it's currently being edited
                         value={
-                          useMetric
-                            ? exercise.weight
-                            : kgToLbs(exercise.weight).toFixed(1)
-                        } // Convert to lbs for display if needed
+                          typeof exercise.weight === "string" &&
+                          exercise.weight !== ""
+                            ? exercise.weight // Keep raw string during editing
+                            : exercise.weight === "" || exercise.weight === null
+                              ? "" // Return empty for empty values
+                              : useMetric
+                                ? Number(exercise.weight).toFixed(1)
+                                : kgToLbs(exercise.weight).toFixed(1)
+                        }
                         size="md"
-                        min={0} // Weight can be 0
                         classNames={{
-                          base: "min-w-0 max-w-[100px]", // Increased width
-                          input: "text-center", // Center alignment
+                          base: "min-w-[90px] max-w-[90px]",
+                          input: "text-center",
                           innerWrapper: "h-9",
                         }}
                         onChange={(e) => {
-                          const inputValue = Number(e.target.value) || 0;
-                          // Convert to kg for storage if user is in lbs mode
+                          const inputValue = e.target.value;
+
+                          // Always allow empty input
+                          if (inputValue === "") {
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, weight: "" } : ex
+                              )
+                            );
+                            return;
+                          }
+
+                          // Allow digits and at most one decimal point
+                          if (!/^\d*\.?\d*$/.test(inputValue)) {
+                            return;
+                          }
+
+                          // Store the raw string during editing
+                          setWorkoutExercises((prev) =>
+                            prev.map((ex, i) =>
+                              i === index ? { ...ex, weight: inputValue } : ex
+                            )
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const inputValue = e.target.value;
+
+                          // If empty, set to 0
+                          if (inputValue === "") {
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, weight: 0 } : ex
+                              )
+                            );
+                            return;
+                          }
+
+                          // Otherwise parse and convert
+                          const numValue = Number(inputValue) || 0;
                           const weightInKg = convertToStorageUnit(
-                            inputValue,
+                            numValue,
                             useMetric
                           );
 
@@ -645,10 +746,12 @@ export default function CreateWorkout() {
                       </TableBody>
                     </Table>
 
+                    {/* Add Pagination component outside the Table */}
                     <Pagination
+                      className="mt-4"
                       total={totalPages}
-                      initialPage={currentPage}
-                      size="sm"
+                      initialPage={1}
+                      page={currentPage}
                       onChange={(page) => setCurrentPage(page)}
                     />
                   </ModalBody>

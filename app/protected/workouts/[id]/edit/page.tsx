@@ -410,17 +410,17 @@ export default function EditWorkout() {
             >
               <TableHeader>
                 <TableColumn>NAME</TableColumn>
-                <TableColumn className="w-[110px] sm:w-[130px]">
+                <TableColumn className="w-[120px] min-w-[120px]">
                   SETS
                 </TableColumn>
-                <TableColumn className="w-[110px] sm:w-[130px]">
+                <TableColumn className="w-[120px] min-w-[120px]">
                   REPS
                 </TableColumn>
-                <TableColumn className="w-[120px] sm:w-[150px]">
+                <TableColumn className="w-[140px] min-w-[140px]">
                   WEIGHT{" "}
                   {!loadingPreferences && `(${useMetric ? "KG" : "LBS"})`}
                 </TableColumn>
-                <TableColumn className="w-[100px] sm:w-[120px]">
+                <TableColumn className="w-[100px] min-w-[100px]">
                   ACTIONS
                 </TableColumn>
               </TableHeader>
@@ -430,16 +430,43 @@ export default function EditWorkout() {
                     <TableCell>{exercise.name}</TableCell>
                     <TableCell className="p-2">
                       <Input
-                        type="number"
-                        value={exercise.sets}
+                        type="text" // Changed from number to text
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={String(exercise.sets)} // Convert to string to handle empty case
                         size="md"
-                        min={1}
                         classNames={{
-                          base: "min-w-0 max-w-[100px]",
-                          input: "text-center",
+                          base: "min-w-[80px] w-[80px]",
+                          input: "text-center px-0",
                           innerWrapper: "h-9",
                         }}
                         onChange={(e) => {
+                          const inputValue = e.target.value;
+
+                          // Important: Allow EMPTY input by updating state with empty string
+                          if (inputValue === "") {
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, sets: "" } : ex
+                              )
+                            );
+                            return;
+                          }
+
+                          // Only allow digits
+                          if (!/^\d+$/.test(inputValue)) {
+                            return;
+                          }
+
+                          const newValue = parseInt(inputValue);
+                          setWorkoutExercises((prev) =>
+                            prev.map((ex, i) =>
+                              i === index ? { ...ex, sets: newValue } : ex
+                            )
+                          );
+                        }}
+                        onBlur={(e) => {
+                          // When focus leaves, ensure valid value (min 1)
                           const newValue = parseInt(e.target.value) || 1;
                           setWorkoutExercises((prev) =>
                             prev.map((ex, i) =>
@@ -451,16 +478,43 @@ export default function EditWorkout() {
                     </TableCell>
                     <TableCell className="p-2">
                       <Input
-                        type="number"
-                        value={exercise.reps}
+                        type="text" // Changed from number to text
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={String(exercise.reps)} // Convert to string to handle empty case
                         size="md"
-                        min={1}
                         classNames={{
-                          base: "min-w-0 max-w-[100px]",
-                          input: "text-center",
+                          base: "min-w-[80px] w-[80px]",
+                          input: "text-center px-0",
                           innerWrapper: "h-9",
                         }}
                         onChange={(e) => {
+                          const inputValue = e.target.value;
+
+                          // Important: Allow EMPTY input by updating state with empty string
+                          if (inputValue === "") {
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, reps: "" } : ex
+                              )
+                            );
+                            return;
+                          }
+
+                          // Only allow digits
+                          if (!/^\d+$/.test(inputValue)) {
+                            return;
+                          }
+
+                          const newValue = parseInt(inputValue);
+                          setWorkoutExercises((prev) =>
+                            prev.map((ex, i) =>
+                              i === index ? { ...ex, reps: newValue } : ex
+                            )
+                          );
+                        }}
+                        onBlur={(e) => {
+                          // When focus leaves, ensure valid value (min 1)
                           const newValue = parseInt(e.target.value) || 1;
                           setWorkoutExercises((prev) =>
                             prev.map((ex, i) =>
@@ -472,25 +526,68 @@ export default function EditWorkout() {
                     </TableCell>
                     <TableCell className="p-2">
                       <Input
-                        type="number"
+                        type="text" // Changed from number to text
+                        inputMode="numeric"
+                        pattern="[0-9.]*" // Allow decimal points
+                        // Key change: Don't format the value if it's currently being edited
                         value={
-                          useMetric
-                            ? exercise.weight
-                            : kgToLbs(exercise.weight).toFixed(1)
+                          typeof exercise.weight === "string" &&
+                          exercise.weight !== ""
+                            ? exercise.weight // Keep raw string during editing
+                            : exercise.weight === "" || exercise.weight === null
+                              ? "" // Return empty for empty values
+                              : useMetric
+                                ? Number(exercise.weight).toFixed(1)
+                                : kgToLbs(exercise.weight).toFixed(1)
                         }
                         size="md"
-                        min={0}
                         classNames={{
-                          base: "min-w-0 max-w-[100px]",
+                          base: "min-w-[90px] max-w-[90px]",
                           input: "text-center",
                           innerWrapper: "h-9",
                         }}
                         onChange={(e) => {
-                          const inputValue = Number(e.target.value) || 0;
+                          const inputValue = e.target.value;
 
-                          // Use the helper to convert to storage format (kg)
+                          // Always allow empty input
+                          if (inputValue === "") {
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, weight: "" } : ex
+                              )
+                            );
+                            return;
+                          }
+
+                          // Allow digits and at most one decimal point
+                          if (!/^\d*\.?\d*$/.test(inputValue)) {
+                            return;
+                          }
+
+                          // Store the raw string during editing
+                          setWorkoutExercises((prev) =>
+                            prev.map((ex, i) =>
+                              i === index ? { ...ex, weight: inputValue } : ex
+                            )
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const inputValue = e.target.value;
+
+                          // If empty, set to 0
+                          if (inputValue === "") {
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, weight: 0 } : ex
+                              )
+                            );
+                            return;
+                          }
+
+                          // Otherwise parse and convert
+                          const numValue = Number(inputValue) || 0;
                           const weightInKg = convertToStorageUnit(
-                            inputValue,
+                            numValue,
                             useMetric
                           );
 

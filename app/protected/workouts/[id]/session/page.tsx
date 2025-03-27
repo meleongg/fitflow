@@ -73,6 +73,7 @@ const getWorkoutExercises = async (supabase: any, workoutId: string) => {
   return transformedExercises;
 };
 
+// 1. First, update your SessionExercise interface (add | null)
 interface SessionExercise {
   id: string;
   name: string;
@@ -81,8 +82,8 @@ interface SessionExercise {
   targetWeight: number;
   actualSets: {
     setNumber: number;
-    reps: number;
-    weight: number;
+    reps: number | null; // Allow null for empty state
+    weight: number | null; // Allow null for empty state
     completed: boolean;
   }[];
 }
@@ -448,8 +449,8 @@ export default function WorkoutSession() {
               session_id: session.id,
               exercise_id: exercise.id,
               set_number: set.setNumber,
-              reps: parseInt(set.reps.toString()), // Ensure numbers
-              weight: parseFloat(set.weight.toString()), // Ensure numbers
+              reps: set.reps ?? 0, // Use nullish coalescing to handle null
+              weight: set.weight ?? 0, // Use nullish coalescing to handle null
             }))
         );
 
@@ -478,8 +479,8 @@ export default function WorkoutSession() {
         exercises: sessionExercises.map((exercise) => ({
           exercise_id: exercise.id,
           sets: exercise.actualSets.map((set) => ({
-            reps: parseInt(set.reps.toString()),
-            weight: parseFloat(set.weight.toString()),
+            reps: set.reps ?? 0, // Use nullish coalescing to handle null
+            weight: set.weight ?? 0, // Use nullish coalescing to handle null
             completed: set.completed,
           })),
         })),
@@ -783,16 +784,16 @@ export default function WorkoutSession() {
                     }}
                   >
                     <TableHeader>
-                      <TableColumn className="w-[80px] sm:w-[90px]">
+                      <TableColumn className="w-[80px] min-w-[80px]">
                         SET
                       </TableColumn>
-                      <TableColumn className="w-[110px] sm:w-[130px]">
+                      <TableColumn className="w-[120px] min-w-[120px]">
                         REPS
                       </TableColumn>
-                      <TableColumn className="w-[110px] sm:w-[130px]">
+                      <TableColumn className="w-[140px] min-w-[140px]">
                         WEIGHT ({useMetric ? "KG" : "LBS"})
                       </TableColumn>
-                      <TableColumn className="w-[130px] sm:w-[150px]">
+                      <TableColumn className="w-[130px] min-w-[130px]">
                         STATUS
                       </TableColumn>
                     </TableHeader>
@@ -804,16 +805,44 @@ export default function WorkoutSession() {
                           </TableCell>
                           <TableCell className="p-2">
                             <Input
-                              type="number"
-                              value={String(set.reps)}
+                              type="text" // Changed from number to text
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              // Use empty string for display if value is null
+                              value={set.reps === null ? "" : String(set.reps)}
                               size="md"
-                              min={0}
                               classNames={{
-                                base: "min-w-0 max-w-[100px]",
-                                input: "text-center",
+                                base: "min-w-[80px] w-[80px]",
+                                input: "text-center px-0",
                                 innerWrapper: "h-9",
                               }}
                               onChange={(e) => {
+                                const inputValue = e.target.value;
+
+                                // Important: Allow EMPTY input by updating state with null
+                                if (inputValue === "") {
+                                  const newExercises = [...sessionExercises];
+                                  newExercises[exerciseIndex].actualSets[
+                                    setIndex
+                                  ].reps = null;
+                                  setSessionExercises(newExercises);
+                                  return;
+                                }
+
+                                // Only allow digits
+                                if (!/^\d+$/.test(inputValue)) {
+                                  return;
+                                }
+
+                                const newValue = parseInt(inputValue);
+                                const newExercises = [...sessionExercises];
+                                newExercises[exerciseIndex].actualSets[
+                                  setIndex
+                                ].reps = newValue;
+                                setSessionExercises(newExercises);
+                              }}
+                              onBlur={(e) => {
+                                // When focus leaves, ensure valid value (min 0)
                                 const newValue = parseInt(e.target.value) || 0;
                                 const newExercises = [...sessionExercises];
                                 newExercises[exerciseIndex].actualSets[
@@ -825,24 +854,68 @@ export default function WorkoutSession() {
                           </TableCell>
                           <TableCell className="p-2">
                             <Input
-                              type="number"
+                              type="text" // Changed from number to text
+                              inputMode="numeric"
+                              pattern="[0-9.]*" // Allow decimal points
+                              // Format the value properly
                               value={
-                                useMetric
-                                  ? String(set.weight)
-                                  : String(kgToLbs(set.weight).toFixed(1))
+                                set.weight === null
+                                  ? ""
+                                  : useMetric
+                                    ? Number(set.weight).toFixed(1)
+                                    : kgToLbs(set.weight).toFixed(1)
                               }
                               size="md"
-                              min={0}
                               classNames={{
-                                base: "min-w-0 max-w-[100px]",
+                                base: "min-w-[90px] max-w-[90px]",
                                 input: "text-center",
                                 innerWrapper: "h-9",
                               }}
                               onChange={(e) => {
-                                const inputValue = Number(e.target.value) || 0;
+                                const inputValue = e.target.value;
+
+                                // Always allow empty input
+                                if (inputValue === "") {
+                                  const newExercises = [...sessionExercises];
+                                  newExercises[exerciseIndex].actualSets[
+                                    setIndex
+                                  ].weight = null;
+                                  setSessionExercises(newExercises);
+                                  return;
+                                }
+
+                                // Allow digits and at most one decimal point
+                                if (!/^\d*\.?\d*$/.test(inputValue)) {
+                                  return;
+                                }
+
+                                // For now store the parsed number directly
+                                const numValue = Number(inputValue);
+                                const newExercises = [...sessionExercises];
+                                newExercises[exerciseIndex].actualSets[
+                                  setIndex
+                                ].weight = numValue;
+                                setSessionExercises(newExercises);
+                              }}
+                              onBlur={(e) => {
+                                const inputValue = e.target.value;
+
+                                // If empty, set to 0
+                                if (inputValue === "") {
+                                  const newExercises = [...sessionExercises];
+                                  newExercises[exerciseIndex].actualSets[
+                                    setIndex
+                                  ].weight = 0;
+                                  setSessionExercises(newExercises);
+                                  return;
+                                }
+
+                                // Otherwise parse and convert
+                                const numValue = Number(inputValue) || 0;
                                 const storageValue = useMetric
-                                  ? inputValue
-                                  : lbsToKg(inputValue);
+                                  ? numValue
+                                  : lbsToKg(numValue);
+
                                 const newExercises = [...sessionExercises];
                                 newExercises[exerciseIndex].actualSets[
                                   setIndex
