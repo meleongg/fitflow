@@ -1,5 +1,8 @@
 "use client";
 
+// Import dynamic from next/dynamic at the top
+import dynamic from "next/dynamic";
+
 import ClientOnly from "@/components/client-only";
 import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
@@ -53,7 +56,7 @@ interface DbExercise {
   is_default?: boolean;
 }
 
-export default function CreateWorkout() {
+const CreateWorkoutPage = () => {
   const router = useRouter();
   const { useMetric, isLoading } = useUnitPreference();
   const [workoutExercises, setWorkoutExercises] = useState<Exercise[]>([]);
@@ -1196,4 +1199,9 @@ export default function CreateWorkout() {
       </ClientOnly>
     </div>
   );
-}
+};
+
+// Use dynamic import with SSR disabled
+export default dynamic(() => Promise.resolve(CreateWorkoutPage), {
+  ssr: false,
+});
