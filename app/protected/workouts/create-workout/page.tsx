@@ -2,6 +2,7 @@
 
 // Import dynamic from next/dynamic at the top
 import dynamic from "next/dynamic";
+import { useRef } from "react";
 
 import ClientOnly from "@/components/client-only";
 import BackButton from "@/components/ui/back-button";
@@ -108,6 +109,12 @@ const CreateWorkoutPage = () => {
     onOpen: onDeleteOpen,
     onClose: onDeleteClose,
   } = useDisclosure();
+
+  // Add a form reference near your other state declarations
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Add this state near your other state declarations
+  const [isProgrammaticReset, setIsProgrammaticReset] = useState(false);
 
   // Update fetchExercises to return a Promise
   const fetchExercises = async (
@@ -439,7 +446,15 @@ const CreateWorkoutPage = () => {
       toast.success("Workout created successfully!");
 
       setWorkoutExercises([]); // Clear exercises after submission
-      e.currentTarget.reset(); // Reset form fields
+
+      // Set the flag before resetting
+      setIsProgrammaticReset(true);
+      if (formRef.current) {
+        formRef.current.reset();
+      } else {
+        // Fallback if ref isn't available
+        setErrors({});
+      }
 
       // Use Next.js router instead of window.location
       router.push("/protected/workouts");
@@ -493,6 +508,7 @@ const CreateWorkoutPage = () => {
       </div>
 
       <Form
+        ref={formRef} // Add this ref
         className="w-full max-w-full justify-center items-center space-y-4"
         validationBehavior="native"
         validationErrors={errors}
@@ -506,8 +522,13 @@ const CreateWorkoutPage = () => {
           // Reset selected category if needed
           setSelectedCategory(undefined);
 
-          // Show toast notification
-          toast.info("Form has been reset");
+          // Only show toast if it's a manual reset (not from submission)
+          if (!isProgrammaticReset) {
+            toast.info("Form has been reset");
+          }
+
+          // Reset the flag
+          setIsProgrammaticReset(false);
         }}
         onSubmit={onWorkoutSubmit}
       >
