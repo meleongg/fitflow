@@ -31,6 +31,7 @@ import {
 } from "@nextui-org/react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 // Fetch workout data
 const getWorkoutData = async (supabase: any, workoutId: string) => {
@@ -276,6 +277,7 @@ export default function WorkoutSession() {
         exercise_order: prev.length,
       },
     ]);
+    toast.success(`${exercise.name} added to workout`); // Add success toast
     onClose();
   };
 
@@ -292,6 +294,7 @@ export default function WorkoutSession() {
       } catch (err) {
         console.error(err);
         setError("Failed to fetch workout details");
+        toast.error("Failed to fetch workout details"); // Add toast notification
       } finally {
         setIsLoading(false);
       }
@@ -342,6 +345,9 @@ export default function WorkoutSession() {
     const { exerciseName, exerciseDescription } = data;
 
     try {
+      // Show loading toast
+      const toastId = toast.loading("Adding custom exercise...");
+
       // Get the authenticated user
       const {
         data: { user },
@@ -349,31 +355,38 @@ export default function WorkoutSession() {
       } = await supabase.auth.getUser();
 
       if (authError) {
+        toast.dismiss(toastId);
+        toast.error("Authentication error. Please try again.");
         throw new Error("Unable to fetch user information");
       }
 
       if (!user) {
+        toast.dismiss(toastId);
+        toast.error("Not logged in. Please sign in again.");
         throw new Error("No authenticated user found");
       }
 
-      // Check if any exercise with this name already exists (custom or default)
+      // Check if any exercise with this name already exists
       const { data: existingExercises, error: searchError } = await supabase
         .from("exercises")
         .select("id, name")
         .ilike("name", exerciseName as string);
 
       if (searchError) {
+        toast.dismiss(toastId);
+        toast.error("Failed to check for existing exercises");
         console.error("Error checking for existing exercises:", searchError);
         return;
       }
 
-      // If we found an exercise with the same name
       if (existingExercises && existingExercises.length > 0) {
+        toast.dismiss(toastId);
+        toast.error("An exercise with this name already exists");
         setCustomExerciseError("An exercise with this name already exists");
         return;
       }
 
-      // Continue with exercise creation since no duplicate was found
+      // Continue with exercise creation
       const { data: insertedExercise, error } = await supabase
         .from("exercises")
         .insert({
@@ -387,11 +400,17 @@ export default function WorkoutSession() {
         .single();
 
       if (error) {
+        toast.dismiss(toastId);
+        toast.error("Failed to add custom exercise");
         console.error("Error adding custom exercise:", error);
         return;
       }
 
-      // Add exercise to table and close modal
+      // Success toast
+      toast.dismiss(toastId);
+      toast.success(`${insertedExercise.name} added to your exercise library!`);
+
+      // Add exercise to workout
       handleAddExercise({
         id: insertedExercise.id,
         name: insertedExercise.name,
@@ -400,13 +419,11 @@ export default function WorkoutSession() {
         is_default: insertedExercise.is_default,
       });
 
-      // Close the modal
       onCustomClose();
-
-      // Refresh exercises list in background
       fetchExercises(currentPage);
     } catch (error: any) {
       console.error("Error:", error.message);
+      toast.error(`Error: ${error.message || "Failed to add exercise"}`);
     }
   };
 
@@ -420,37 +437,42 @@ export default function WorkoutSession() {
     if (isOnline) {
       setSubmitted(true);
       try {
+        // Add loading toast
+        const toastId = toast.loading("Saving workout session...");
+
         if (!user) {
+          toast.dismiss(toastId);
+          toast.error("Not authenticated. Please sign in again.");
           throw new Error("Not authenticated");
         }
 
-        // Use sessionStartTime instead of 'now'
         const { data: session, error: sessionError } = await supabase
           .from("sessions")
           .insert({
             user_id: user.id,
             workout_id: workoutId,
-            started_at: sessionStartTime, // Use the stored start time
-            ended_at: endTime, // Use the current time as end time
+            started_at: sessionStartTime,
+            ended_at: endTime,
           })
           .select()
           .single();
 
         if (sessionError || !session) {
+          toast.dismiss(toastId);
+          toast.error("Failed to save workout session");
           throw new Error("Failed to create session");
         }
 
-        // Filter out uncompleted sets and format data
         const sessionExercisesData = sessionExercises.flatMap((exercise) =>
           exercise.actualSets
-            .filter((set) => set.completed) // Only include completed sets
+            .filter((set) => set.completed)
             .map((set) => ({
               user_id: user.id,
               session_id: session.id,
               exercise_id: exercise.id,
               set_number: set.setNumber,
-              reps: set.reps ?? 0, // Use nullish coalescing to handle null
-              weight: set.weight ?? 0, // Use nullish coalescing to handle null
+              reps: set.reps ?? 0,
+              weight: set.weight ?? 0,
             }))
         );
 
@@ -459,47 +481,64 @@ export default function WorkoutSession() {
           .insert(sessionExercisesData);
 
         if (exercisesError) {
+          toast.dismiss(toastId);
+          toast.error("Failed to save exercise data");
           console.error("Exercise insertion error:", exercisesError);
           throw new Error("Failed to save session exercises");
         }
 
-        // Success - redirect to session summary
+        // Success toast
+        toast.dismiss(toastId);
+        toast.success("Workout completed successfully!");
+
         router.push(`/protected/sessions/${session.id}`);
       } catch (error: any) {
         console.error("Error completing session:", error);
-        // TODO: Show error toast
+        toast.error(`Error: ${error.message || "Failed to save workout"}`);
         setSubmitted(false);
       }
     } else {
       // For offline storage
-      const offlineSession: OfflineWorkoutSession = {
-        workout_id: workoutId,
-        started_at: sessionStartTime!, // Use the stored start time
-        ended_at: endTime, // Use the current time as end time
-        exercises: sessionExercises.map((exercise) => ({
-          exercise_id: exercise.id,
-          sets: exercise.actualSets.map((set) => ({
-            reps: set.reps ?? 0, // Use nullish coalescing to handle null
-            weight: set.weight ?? 0, // Use nullish coalescing to handle null
-            completed: set.completed,
-          })),
-        })),
-        synced: false,
-      };
+      try {
+        const toastId = toast.loading("Saving workout offline...");
 
-      await db.saveWorkoutSession(offlineSession);
-      alert("Workout saved offline. Will sync when online.");
+        const offlineSession: OfflineWorkoutSession = {
+          workout_id: workoutId,
+          started_at: sessionStartTime!,
+          ended_at: endTime,
+          exercises: sessionExercises.map((exercise) => ({
+            exercise_id: exercise.id,
+            sets: exercise.actualSets.map((set) => ({
+              reps: set.reps ?? 0,
+              weight: set.weight ?? 0,
+              completed: set.completed,
+            })),
+          })),
+          synced: false,
+        };
+
+        await db.saveWorkoutSession(offlineSession);
+
+        toast.dismiss(toastId);
+        toast.success("Workout saved offline. Will sync when online.");
+
+        // Navigate back to workout page
+        router.push("/protected/workouts");
+      } catch (error: any) {
+        toast.error(`Error saving offline: ${error.message}`);
+      }
     }
 
-    // Clear timer state after workout completion
     localStorage.removeItem(TIMER_STORAGE_KEY);
   };
 
   // Add this function with the other handlers
   const handleDeleteExercise = (exerciseIndex: number) => {
+    const exerciseName = sessionExercises[exerciseIndex].name;
     setSessionExercises((prev) =>
       prev.filter((_, index) => index !== exerciseIndex)
     );
+    toast.success(`${exerciseName} removed from workout`);
   };
 
   // Add this to your component
@@ -931,10 +970,21 @@ export default function WorkoutSession() {
                               className="w-full min-w-[110px]"
                               onPress={() => {
                                 const newExercises = [...sessionExercises];
+                                const wasCompleted =
+                                  newExercises[exerciseIndex].actualSets[
+                                    setIndex
+                                  ].completed;
                                 newExercises[exerciseIndex].actualSets[
                                   setIndex
-                                ].completed = !set.completed;
+                                ].completed = !wasCompleted;
                                 setSessionExercises(newExercises);
+
+                                // Only show toast when marking as complete (not when unmarking)
+                                if (!wasCompleted) {
+                                  toast.success(
+                                    `Set ${set.setNumber} completed!`
+                                  );
+                                }
                               }}
                             >
                               {set.completed ? "Completed" : "Mark Complete"}
@@ -951,13 +1001,17 @@ export default function WorkoutSession() {
                     size="sm"
                     onPress={() => {
                       const newExercises = [...sessionExercises];
+                      const newSetNumber = exercise.actualSets.length + 1;
                       newExercises[exerciseIndex].actualSets.push({
-                        setNumber: exercise.actualSets.length + 1,
+                        setNumber: newSetNumber,
                         reps: 0,
                         weight: 0,
                         completed: false,
                       });
                       setSessionExercises(newExercises);
+                      toast.info(
+                        `Set ${newSetNumber} added to ${exercise.name}`
+                      );
                     }}
                   >
                     Add Set
@@ -999,12 +1053,13 @@ export default function WorkoutSession() {
                 variant="flat"
                 className="w-full"
                 onPress={() => {
-                  // Show confirmation dialog
                   if (
                     confirm(
                       "Are you sure you want to cancel this workout? Progress will be lost."
                     )
                   ) {
+                    toast.info("Workout cancelled");
+
                     // Clear timer storage
                     localStorage.removeItem(TIMER_STORAGE_KEY);
 
@@ -1019,8 +1074,6 @@ export default function WorkoutSession() {
                 Cancel Workout
               </Button>
             </div>
-
-            {/* TODO: add cancel workout button & add to session context */}
           </div>
         </div>
       </Form>

@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 // Fetch workout data
 const getWorkoutData = async (supabase: any, workoutId: string) => {
@@ -161,6 +162,8 @@ export default function EditWorkout() {
         exercise_order: prev.length,
       },
     ]);
+    // Add success toast
+    toast.success(`${exercise.name} added to workout`);
     onClose();
   };
 
@@ -177,6 +180,7 @@ export default function EditWorkout() {
       } catch (err) {
         console.error(err);
         setError("Failed to fetch workout details");
+        toast.error("Failed to fetch workout details");
       } finally {
         setIsLoading(false);
       }
@@ -196,6 +200,9 @@ export default function EditWorkout() {
     const { exerciseName, exerciseDescription } = data;
 
     try {
+      // Show loading toast
+      const toastId = toast.loading("Adding custom exercise...");
+
       // Get the authenticated user
       const {
         data: { user },
@@ -203,10 +210,14 @@ export default function EditWorkout() {
       } = await supabase.auth.getUser();
 
       if (authError) {
+        toast.dismiss(toastId);
+        toast.error("Authentication error. Please try again.");
         throw new Error("Unable to fetch user information");
       }
 
       if (!user) {
+        toast.dismiss(toastId);
+        toast.error("Not logged in. Please sign in again.");
         throw new Error("No authenticated user found");
       }
 
@@ -217,13 +228,15 @@ export default function EditWorkout() {
           name: exerciseName,
           category_id: selectedCategory || null,
           description: exerciseDescription || null,
-          user_id: user.id, // Use the user's ID as the foreign key
-          is_default: false, // Mark it as a custom (non-default) exercise
+          user_id: user.id,
+          is_default: false,
         })
         .select()
         .single();
 
       if (error) {
+        toast.dismiss(toastId);
+        toast.error("Failed to add custom exercise");
         console.error("Error adding custom exercise:", error);
         return;
       }
@@ -237,11 +250,15 @@ export default function EditWorkout() {
         is_default: insertedExercise.is_default,
       });
 
-      alert("Custom exercise added successfully!");
+      // Show success toast and dismiss loading toast
+      toast.dismiss(toastId);
+      toast.success(`${insertedExercise.name} added to your exercise library!`);
+
       onCustomClose();
       fetchExercises(currentPage); // Refresh the exercises list
     } catch (error: any) {
       console.error("Error:", error.message);
+      toast.error(`Error: ${error.message || "Failed to add exercise"}`);
     }
   };
 
@@ -256,6 +273,9 @@ export default function EditWorkout() {
     setErrors({});
 
     try {
+      // Show loading toast
+      const toastId = toast.loading("Saving workout changes...");
+
       // Get the authenticated user
       const {
         data: { user },
@@ -263,10 +283,14 @@ export default function EditWorkout() {
       } = await supabase.auth.getUser();
 
       if (authError) {
+        toast.dismiss(toastId);
+        toast.error("Authentication error. Please try again.");
         throw new Error("Unable to fetch user information");
       }
 
       if (!user) {
+        toast.dismiss(toastId);
+        toast.error("Not logged in. Please sign in again.");
         throw new Error("No authenticated user found");
       }
 
@@ -280,6 +304,8 @@ export default function EditWorkout() {
         .eq("id", workoutId);
 
       if (workoutError) {
+        toast.dismiss(toastId);
+        toast.error("Failed to update workout details");
         console.error("Error updating workout:", workoutError);
         return;
       }
@@ -305,6 +331,8 @@ export default function EditWorkout() {
           );
 
         if (exerciseError) {
+          toast.dismiss(toastId);
+          toast.error("Failed to save exercise information");
           console.error("Error upserting workout exercise:", exerciseError);
           return;
         }
@@ -312,25 +340,31 @@ export default function EditWorkout() {
 
       // Delete any workout_exercises that are no longer in the list
       const currentExerciseIds = workoutExercises.map((e) => e.id);
-      const { error: deleteError } = await supabase
-        .from("workout_exercises")
-        .delete()
-        .eq("workout_id", workoutId)
-        .not("exercise_id", "in", `(${currentExerciseIds.join(",")})`);
 
-      if (deleteError) {
-        console.error("Error cleaning up old exercises:", deleteError);
-        return;
+      if (currentExerciseIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("workout_exercises")
+          .delete()
+          .eq("workout_id", workoutId)
+          .not("exercise_id", "in", `(${currentExerciseIds.join(",")})`);
+
+        if (deleteError) {
+          toast.dismiss(toastId);
+          toast.error("Failed to remove deleted exercises");
+          console.error("Error cleaning up old exercises:", deleteError);
+          return;
+        }
       }
 
-      alert("Workout and exercises successfully updated!");
-      // e.currentTarget.reset(); // Reset form fields
+      // Show success toast
+      toast.dismiss(toastId);
+      toast.success("Workout updated successfully!");
 
-      // TODO: Redirect to the workout details page
+      // Redirect to the workout details page
       router.push(`/protected/workouts/${workoutId}`);
-      // TODO: Add a toast notification for successful submission
     } catch (error: any) {
       console.error("Unexpected Error", error);
+      toast.error(`Error: ${error.message || "Failed to update workout"}`);
     }
 
     // Clear errors and submit
@@ -603,11 +637,14 @@ export default function EditWorkout() {
                       <Button
                         color="danger"
                         size="sm"
-                        onPress={() =>
+                        onPress={() => {
                           setWorkoutExercises((prev) =>
                             prev.filter((_, i) => i !== index)
-                          )
-                        }
+                          );
+                          toast.success(
+                            `${exercise.name} removed from workout`
+                          );
+                        }}
                       >
                         Delete
                       </Button>

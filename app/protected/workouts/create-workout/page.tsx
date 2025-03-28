@@ -31,6 +31,8 @@ import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { convertToStorageUnit, kgToLbs } from "@/utils/units";
 // Add import at the top
 import { useRouter } from "next/navigation";
+// Add this import at the top with other imports
+import { toast } from "sonner";
 
 export default function CreateWorkout() {
   const router = useRouter();
@@ -180,6 +182,10 @@ export default function CreateWorkout() {
         exercise_order: prev.length,
       },
     ]);
+
+    // Show toast when exercise is added
+    toast.success(`${exercise.name} added to workout`);
+
     onClose();
   };
 
@@ -199,6 +205,9 @@ export default function CreateWorkout() {
     const { exerciseName, exerciseDescription } = data;
 
     try {
+      // Show loading toast
+      const toastId = toast.loading("Adding custom exercise...");
+
       // Get the authenticated user
       const {
         data: { user },
@@ -206,10 +215,14 @@ export default function CreateWorkout() {
       } = await supabase.auth.getUser();
 
       if (authError) {
+        toast.dismiss(toastId);
+        toast.error("Authentication error. Please try again.");
         throw new Error("Unable to fetch user information");
       }
 
       if (!user) {
+        toast.dismiss(toastId);
+        toast.error("Not logged in. Please sign in again.");
         throw new Error("No authenticated user found");
       }
 
@@ -220,12 +233,16 @@ export default function CreateWorkout() {
         .ilike("name", exerciseName as string);
 
       if (searchError) {
+        toast.dismiss(toastId);
+        toast.error("Failed to check for existing exercises.");
         console.error("Error checking for existing exercises:", searchError);
         return;
       }
 
       // If we found an exercise with the same name
       if (existingExercises && existingExercises.length > 0) {
+        toast.dismiss(toastId);
+        toast.error("An exercise with this name already exists");
         setCustomExerciseError("An exercise with this name already exists");
         return;
       }
@@ -244,9 +261,15 @@ export default function CreateWorkout() {
         .single();
 
       if (error) {
+        toast.dismiss(toastId);
+        toast.error("Failed to add custom exercise.");
         console.error("Error adding custom exercise:", error);
         return;
       }
+
+      // Success - show toast
+      toast.dismiss(toastId);
+      toast.success(`${insertedExercise.name} added to your exercise library!`);
 
       // Add exercise to table and close modal
       handleAddExercise({
@@ -264,6 +287,7 @@ export default function CreateWorkout() {
       fetchExercises(currentPage);
     } catch (error: any) {
       console.error("Error:", error.message);
+      toast.error(`Error: ${error.message || "Failed to add exercise"}`);
     }
   };
 
@@ -282,10 +306,14 @@ export default function CreateWorkout() {
     // Check for duplicate workout name
     if (existingWorkoutNames.includes(workoutName.toString().toLowerCase())) {
       setErrors({ name: "A workout with this name already exists" });
+      toast.error("A workout with this name already exists");
       return; // Stop the submission if duplicate found
     }
 
     try {
+      // Show loading toast
+      const toastId = toast.loading("Creating workout...");
+
       // Get the authenticated user
       const {
         data: { user },
@@ -293,10 +321,12 @@ export default function CreateWorkout() {
       } = await supabase.auth.getUser();
 
       if (authError) {
+        toast.error("Authentication error. Please try again.");
         throw new Error("Unable to fetch user information");
       }
 
       if (!user) {
+        toast.error("Not logged in. Please sign in again.");
         throw new Error("No authenticated user found");
       }
 
@@ -311,6 +341,8 @@ export default function CreateWorkout() {
         .single();
 
       if (workoutError || !newWorkout) {
+        toast.dismiss(toastId);
+        toast.error("Failed to create workout. Please try again.");
         console.error("Error creating workout:", workoutError);
         return;
       }
@@ -322,9 +354,9 @@ export default function CreateWorkout() {
         user_id: user.id,
         workout_id: workoutId,
         exercise_id: exercise.id,
-        sets: exercise.sets,
-        reps: exercise.reps,
-        weight: exercise.weight,
+        sets: exercise.sets || 0, // Add null check
+        reps: exercise.reps || 0,
+        weight: exercise.weight || 0,
         exercise_order: exercise.exercise_order,
       }));
 
@@ -333,9 +365,15 @@ export default function CreateWorkout() {
         .insert(workoutExerciseEntries);
 
       if (exercisesError) {
+        toast.dismiss(toastId);
+        toast.error("Failed to add exercises. Please try again.");
         console.error("Error creating workout exercises:", exercisesError);
         return;
       }
+
+      // Success - show success toast
+      toast.dismiss(toastId);
+      toast.success("Workout created successfully!");
 
       setWorkoutExercises([]); // Clear exercises after submission
       e.currentTarget.reset(); // Reset form fields
@@ -344,6 +382,7 @@ export default function CreateWorkout() {
       router.push("/protected/workouts");
     } catch (error: any) {
       console.error("Unexpected Error", error);
+      toast.error(`Error: ${error.message || "Failed to create workout"}`);
     }
 
     // Clear errors and submit
@@ -378,6 +417,9 @@ export default function CreateWorkout() {
 
           // Reset selected category if needed
           setSelectedCategory(undefined);
+
+          // Show toast notification
+          toast.info("Form has been reset");
         }}
         onSubmit={onWorkoutSubmit}
       >
