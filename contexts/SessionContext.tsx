@@ -8,13 +8,27 @@ import {
   useState,
 } from "react";
 
+interface SessionExercise {
+  id: string;
+  name: string;
+  targetSets: number;
+  targetReps: number;
+  targetWeight: number;
+  actualSets: {
+    setNumber: number;
+    reps: number | null;
+    weight: number | null;
+    completed: boolean;
+  }[];
+}
+
 interface ActiveSession {
   id: string;
   workoutId: string;
   workoutName: string;
   startTime: string;
   progress?: {
-    exercises: any[]; // Store sessionExercises state
+    exercises: SessionExercise[]; // Properly type exercises
   };
 }
 
@@ -26,11 +40,12 @@ interface SessionContextProps {
     workout_name: string;
     started_at: string;
     progress?: {
-      exercises: any[];
+      exercises: SessionExercise[];
     };
   }) => void;
-  updateSessionProgress: (exercises: any[]) => void; // Add this new function
+  updateSessionProgress: (exercises: SessionExercise[]) => void;
   endSession: () => void;
+  getElapsedMinutes: () => number; // Add function to calculate elapsed time in minutes
 }
 
 const SessionContext = createContext<SessionContextProps | undefined>(
@@ -58,18 +73,15 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     workout_name: string;
     started_at: string;
     progress?: {
-      exercises: any[];
+      exercises: SessionExercise[];
     };
   }) => {
-    // Always use current timestamp for consistency
-    const currentTime = new Date().toISOString();
-
+    // Use the provided started_at time to ensure consistency with the UI
     const newSession: ActiveSession = {
       id: session.user_id,
       workoutId: session.workout_id,
       workoutName: session.workout_name,
-      // Use current time instead of passed timestamp for consistency
-      startTime: currentTime,
+      startTime: session.started_at,
       progress: {
         exercises: session.progress?.exercises ?? [],
       },
@@ -83,19 +95,30 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newSession));
   };
 
-  const updateSessionProgress = (exercises: any[]) => {
+  const updateSessionProgress = (exercises: SessionExercise[]) => {
     if (!activeSession) return;
 
     const updatedSession = {
       ...activeSession,
       progress: {
         ...activeSession.progress,
-        exercises: exercises,
+        exercises: exercises, // This preserves the order of exercises
       },
     };
 
     setActiveSession(updatedSession);
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSession));
+  };
+
+  // Calculate elapsed time in minutes
+  const getElapsedMinutes = (): number => {
+    if (!activeSession) return 0;
+
+    const startTime = new Date(activeSession.startTime).getTime();
+    const currentTime = Date.now();
+
+    // Convert milliseconds to minutes (rounded to 1 decimal place)
+    return Math.round(((currentTime - startTime) / (1000 * 60)) * 10) / 10;
   };
 
   const endSession = () => {
@@ -113,7 +136,13 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <SessionContext.Provider
-      value={{ activeSession, startSession, updateSessionProgress, endSession }}
+      value={{
+        activeSession,
+        startSession,
+        updateSessionProgress,
+        endSession,
+        getElapsedMinutes,
+      }}
     >
       {children}
     </SessionContext.Provider>
