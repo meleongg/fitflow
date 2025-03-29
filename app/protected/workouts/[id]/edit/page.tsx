@@ -1,11 +1,12 @@
 "use client";
 
 import ActiveSessionBanner from "@/components/active-session-banner";
+import ClientOnly from "@/components/client-only";
 import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { createClient } from "@/utils/supabase/client";
-import { convertToStorageUnit, kgToLbs } from "@/utils/units";
+import { convertToStorageUnit } from "@/utils/units";
 import {
   Button,
   Form,
@@ -26,6 +27,7 @@ import {
   Textarea,
   useDisclosure,
 } from "@nextui-org/react";
+import { ArrowDown, ArrowUp, Dumbbell, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -53,7 +55,8 @@ const getWorkoutExercises = async (supabase: any, workoutId: string) => {
       exercise:exercises(*)
     `
     )
-    .eq("workout_id", workoutId);
+    .eq("workout_id", workoutId)
+    .order("exercise_order", { ascending: true });
 
   if (error) throw error;
 
@@ -102,6 +105,16 @@ export default function EditWorkout() {
   } = useDisclosure();
 
   const { useMetric, isLoading: loadingPreferences } = useUnitPreference();
+
+  const [exerciseToDelete, setExerciseToDelete] = useState<{
+    exercise: any;
+    index: number;
+  } | null>(null);
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
 
   // Fetch paginated exercises
   const fetchExercises = async (page: number) => {
@@ -432,228 +445,376 @@ export default function EditWorkout() {
             className="w-full"
           />
 
-          <h2>Exercises</h2>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-semibold">Exercises</h2>
+          </div>
 
+          {/* Mobile-friendly table container */}
           <div className="w-full overflow-x-auto -mx-2 px-2">
-            <Table
-              aria-label="Exercise table"
+            {workoutExercises.length === 0 ? (
+              // Show empty state outside the table
+              <div className="text-center py-12 border rounded-lg">
+                <div className="flex flex-col items-center gap-3 text-gray-500">
+                  <Dumbbell className="w-10 h-10" />
+                  <p>No exercises added yet</p>
+                  <Button size="sm" color="primary" onPress={onOpen}>
+                    Add Your First Exercise
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // Only show table when we have exercises
+              <Table
+                aria-label="Exercise table"
+                classNames={{
+                  base: "min-w-full",
+                  table: "min-w-full",
+                }}
+              >
+                <TableHeader className="sticky top-0 z-10 bg-white dark:bg-gray-900">
+                  <TableColumn className="w-[80px] min-w-[80px] text-center">
+                    ORDER
+                  </TableColumn>
+                  <TableColumn>NAME</TableColumn>
+                  <TableColumn className="w-[120px] min-w-[120px]">
+                    SETS
+                  </TableColumn>
+                  <TableColumn className="w-[120px] min-w-[120px]">
+                    REPS
+                  </TableColumn>
+                  <TableColumn className="w-[140px] min-w-[140px]">
+                    WEIGHT{" "}
+                    {!loadingPreferences && `(${useMetric ? "KG" : "LBS"})`}
+                  </TableColumn>
+                  <TableColumn className="w-[100px] min-w-[100px] text-center">
+                    ACTIONS
+                  </TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {workoutExercises.map((exercise, index) => (
+                    <TableRow key={exercise.id}>
+                      <TableCell className="w-[80px] min-w-[80px]">
+                        <div className="flex justify-center gap-1">
+                          <Button
+                            size="sm"
+                            isIconOnly
+                            variant="light"
+                            isDisabled={index === 0}
+                            onPress={() => {
+                              setWorkoutExercises((prev) => {
+                                const newExercises = [...prev];
+                                if (index > 0) {
+                                  // Swap with previous exercise
+                                  [
+                                    newExercises[index],
+                                    newExercises[index - 1],
+                                  ] = [
+                                    newExercises[index - 1],
+                                    newExercises[index],
+                                  ];
+                                }
+                                // Update exercise_order for each
+                                return newExercises.map((ex, i) => ({
+                                  ...ex,
+                                  exercise_order: i,
+                                }));
+                              });
+                              toast.success("Exercise moved up");
+                            }}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            isIconOnly
+                            variant="light"
+                            isDisabled={index === workoutExercises.length - 1}
+                            onPress={() => {
+                              setWorkoutExercises((prev) => {
+                                const newExercises = [...prev];
+                                if (index < newExercises.length - 1) {
+                                  // Swap with next exercise
+                                  [
+                                    newExercises[index],
+                                    newExercises[index + 1],
+                                  ] = [
+                                    newExercises[index + 1],
+                                    newExercises[index],
+                                  ];
+                                }
+                                // Update exercise_order for each
+                                return newExercises.map((ex, i) => ({
+                                  ...ex,
+                                  exercise_order: i,
+                                }));
+                              });
+                              toast.success("Exercise moved down");
+                            }}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>{exercise.name}</TableCell>
+                      <TableCell className="p-2">
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={String(exercise.sets)}
+                          size="md"
+                          classNames={{
+                            base: "min-w-[80px] w-[80px]",
+                            input: "text-center px-0",
+                            innerWrapper: "h-9",
+                          }}
+                          onChange={(e) => {
+                            const inputValue = e.target.value;
+
+                            if (inputValue === "") {
+                              setWorkoutExercises((prev) =>
+                                prev.map((ex, i) =>
+                                  i === index ? { ...ex, sets: "" } : ex
+                                )
+                              );
+                              return;
+                            }
+
+                            // Only allow digits
+                            if (!/^\d+$/.test(inputValue)) {
+                              return;
+                            }
+
+                            const newValue = parseInt(inputValue);
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, sets: newValue } : ex
+                              )
+                            );
+                          }}
+                          onBlur={(e) => {
+                            // When focus leaves, ensure valid value (min 1)
+                            const newValue = parseInt(e.target.value) || 1;
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, sets: newValue } : ex
+                              )
+                            );
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className="p-2">
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={String(exercise.reps)}
+                          size="md"
+                          classNames={{
+                            base: "min-w-[80px] w-[80px]",
+                            input: "text-center px-0",
+                            innerWrapper: "h-9",
+                          }}
+                          onChange={(e) => {
+                            const inputValue = e.target.value;
+
+                            if (inputValue === "") {
+                              setWorkoutExercises((prev) =>
+                                prev.map((ex, i) =>
+                                  i === index ? { ...ex, reps: "" } : ex
+                                )
+                              );
+                              return;
+                            }
+
+                            // Only allow digits
+                            if (!/^\d+$/.test(inputValue)) {
+                              return;
+                            }
+
+                            const newValue = parseInt(inputValue);
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, reps: newValue } : ex
+                              )
+                            );
+                          }}
+                          onBlur={(e) => {
+                            // When focus leaves, ensure valid value (min 1)
+                            const newValue = parseInt(e.target.value) || 1;
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, reps: newValue } : ex
+                              )
+                            );
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className="p-2">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          pattern="[0-9]*\.?[0-9]*"
+                          value={String(exercise.weight)}
+                          size="md"
+                          classNames={{
+                            base: "min-w-[90px] w-[90px]",
+                            input: "text-center px-0",
+                            innerWrapper: "h-9",
+                          }}
+                          onChange={(e) => {
+                            const inputValue = e.target.value;
+
+                            // Allow empty input
+                            if (inputValue === "") {
+                              setWorkoutExercises((prev) =>
+                                prev.map((ex, i) =>
+                                  i === index ? { ...ex, weight: "" } : ex
+                                )
+                              );
+                              return;
+                            }
+
+                            // Allow any input that could be a valid decimal number
+                            if (/^(\d*\.?\d*)?$/.test(inputValue)) {
+                              // Store the raw string value during editing
+                              setWorkoutExercises((prev) =>
+                                prev.map((ex, i) =>
+                                  i === index
+                                    ? { ...ex, weight: inputValue }
+                                    : ex
+                                )
+                              );
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // When focus leaves, convert to number and ensure valid value (min 0)
+                            const value = e.target.value;
+
+                            // Handle special case of just a decimal point
+                            if (value === ".") {
+                              setWorkoutExercises((prev) =>
+                                prev.map((ex, i) =>
+                                  i === index ? { ...ex, weight: 0 } : ex
+                                )
+                              );
+                              return;
+                            }
+
+                            const newValue = parseFloat(value) || 0;
+                            const weightInKg = convertToStorageUnit(
+                              newValue,
+                              useMetric
+                            );
+
+                            setWorkoutExercises((prev) =>
+                              prev.map((ex, i) =>
+                                i === index ? { ...ex, weight: weightInKg } : ex
+                              )
+                            );
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-center">
+                          <Button
+                            color="danger"
+                            size="sm"
+                            variant="light"
+                            isIconOnly
+                            onPress={() => {
+                              // Store the exercise to be deleted
+                              setExerciseToDelete({
+                                exercise,
+                                index,
+                              });
+                              // Open the confirmation modal
+                              onDeleteOpen();
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          {/* Exercise deletion confirmation modal */}
+          <ClientOnly>
+            <Modal
+              backdrop="opaque"
+              isOpen={isDeleteOpen}
+              onClose={() => {
+                setExerciseToDelete(null);
+                onDeleteClose();
+              }}
+              radius="lg"
+              placement="center"
               classNames={{
-                base: "min-w-full",
-                table: "min-w-full",
+                base: "m-0 mx-auto",
+                wrapper: "items-center justify-center p-2",
               }}
             >
-              <TableHeader>
-                <TableColumn>NAME</TableColumn>
-                <TableColumn className="w-[120px] min-w-[120px]">
-                  SETS
-                </TableColumn>
-                <TableColumn className="w-[120px] min-w-[120px]">
-                  REPS
-                </TableColumn>
-                <TableColumn className="w-[140px] min-w-[140px]">
-                  WEIGHT{" "}
-                  {!loadingPreferences && `(${useMetric ? "KG" : "LBS"})`}
-                </TableColumn>
-                <TableColumn className="w-[100px] min-w-[100px]">
-                  ACTIONS
-                </TableColumn>
-              </TableHeader>
-              <TableBody>
-                {workoutExercises.map((exercise, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{exercise.name}</TableCell>
-                    <TableCell className="p-2">
-                      <Input
-                        type="text" // Changed from number to text
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={String(exercise.sets)} // Convert to string to handle empty case
-                        size="md"
-                        classNames={{
-                          base: "min-w-[80px] w-[80px]",
-                          input: "text-center px-0",
-                          innerWrapper: "h-9",
-                        }}
-                        onChange={(e) => {
-                          const inputValue = e.target.value;
-
-                          // Important: Allow EMPTY input by updating state with empty string
-                          if (inputValue === "") {
-                            setWorkoutExercises((prev) =>
-                              prev.map((ex, i) =>
-                                i === index ? { ...ex, sets: "" } : ex
-                              )
-                            );
-                            return;
-                          }
-
-                          // Only allow digits
-                          if (!/^\d+$/.test(inputValue)) {
-                            return;
-                          }
-
-                          const newValue = parseInt(inputValue);
-                          setWorkoutExercises((prev) =>
-                            prev.map((ex, i) =>
-                              i === index ? { ...ex, sets: newValue } : ex
-                            )
-                          );
-                        }}
-                        onBlur={(e) => {
-                          // When focus leaves, ensure valid value (min 1)
-                          const newValue = parseInt(e.target.value) || 1;
-                          setWorkoutExercises((prev) =>
-                            prev.map((ex, i) =>
-                              i === index ? { ...ex, sets: newValue } : ex
-                            )
-                          );
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell className="p-2">
-                      <Input
-                        type="text" // Changed from number to text
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={String(exercise.reps)} // Convert to string to handle empty case
-                        size="md"
-                        classNames={{
-                          base: "min-w-[80px] w-[80px]",
-                          input: "text-center px-0",
-                          innerWrapper: "h-9",
-                        }}
-                        onChange={(e) => {
-                          const inputValue = e.target.value;
-
-                          // Important: Allow EMPTY input by updating state with empty string
-                          if (inputValue === "") {
-                            setWorkoutExercises((prev) =>
-                              prev.map((ex, i) =>
-                                i === index ? { ...ex, reps: "" } : ex
-                              )
-                            );
-                            return;
-                          }
-
-                          // Only allow digits
-                          if (!/^\d+$/.test(inputValue)) {
-                            return;
-                          }
-
-                          const newValue = parseInt(inputValue);
-                          setWorkoutExercises((prev) =>
-                            prev.map((ex, i) =>
-                              i === index ? { ...ex, reps: newValue } : ex
-                            )
-                          );
-                        }}
-                        onBlur={(e) => {
-                          // When focus leaves, ensure valid value (min 1)
-                          const newValue = parseInt(e.target.value) || 1;
-                          setWorkoutExercises((prev) =>
-                            prev.map((ex, i) =>
-                              i === index ? { ...ex, reps: newValue } : ex
-                            )
-                          );
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell className="p-2">
-                      <Input
-                        type="text" // Changed from number to text
-                        inputMode="numeric"
-                        pattern="[0-9.]*" // Allow decimal points
-                        // Key change: Don't format the value if it's currently being edited
-                        value={
-                          typeof exercise.weight === "string" &&
-                          exercise.weight !== ""
-                            ? exercise.weight // Keep raw string during editing
-                            : exercise.weight === "" || exercise.weight === null
-                              ? "" // Return empty for empty values
-                              : useMetric
-                                ? Number(exercise.weight).toFixed(1)
-                                : kgToLbs(exercise.weight).toFixed(1)
-                        }
-                        size="md"
-                        classNames={{
-                          base: "min-w-[90px] max-w-[90px]",
-                          input: "text-center",
-                          innerWrapper: "h-9",
-                        }}
-                        onChange={(e) => {
-                          const inputValue = e.target.value;
-
-                          // Always allow empty input
-                          if (inputValue === "") {
-                            setWorkoutExercises((prev) =>
-                              prev.map((ex, i) =>
-                                i === index ? { ...ex, weight: "" } : ex
-                              )
-                            );
-                            return;
-                          }
-
-                          // Allow digits and at most one decimal point
-                          if (!/^\d*\.?\d*$/.test(inputValue)) {
-                            return;
-                          }
-
-                          // Store the raw string during editing
-                          setWorkoutExercises((prev) =>
-                            prev.map((ex, i) =>
-                              i === index ? { ...ex, weight: inputValue } : ex
-                            )
-                          );
-                        }}
-                        onBlur={(e) => {
-                          const inputValue = e.target.value;
-
-                          // If empty, set to 0
-                          if (inputValue === "") {
-                            setWorkoutExercises((prev) =>
-                              prev.map((ex, i) =>
-                                i === index ? { ...ex, weight: 0 } : ex
-                              )
-                            );
-                            return;
-                          }
-
-                          // Otherwise parse and convert
-                          const numValue = Number(inputValue) || 0;
-                          const weightInKg = convertToStorageUnit(
-                            numValue,
-                            useMetric
-                          );
-
-                          setWorkoutExercises((prev) =>
-                            prev.map((ex, i) =>
-                              i === index ? { ...ex, weight: weightInKg } : ex
-                            )
-                          );
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
+              <ModalContent>
+                {(onClose) => (
+                  <>
+                    <ModalHeader className="flex flex-col gap-1">
+                      <h3 className="text-lg font-bold">Remove Exercise</h3>
+                    </ModalHeader>
+                    <ModalBody>
+                      <p>
+                        Are you sure you want to remove{" "}
+                        <span className="font-semibold">
+                          {exerciseToDelete?.exercise.name}
+                        </span>{" "}
+                        from this workout?
+                      </p>
+                    </ModalBody>
+                    <ModalFooter>
                       <Button
-                        color="danger"
-                        size="sm"
+                        color="default"
+                        variant="light"
                         onPress={() => {
-                          setWorkoutExercises((prev) =>
-                            prev.filter((_, i) => i !== index)
-                          );
-                          toast.success(
-                            `${exercise.name} removed from workout`
-                          );
+                          setExerciseToDelete(null);
+                          onClose();
                         }}
                       >
-                        Delete
+                        Cancel
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      <Button
+                        color="danger"
+                        onPress={() => {
+                          if (exerciseToDelete) {
+                            setWorkoutExercises((prev) => {
+                              const filtered = prev.filter(
+                                (_, i) => i !== exerciseToDelete.index
+                              );
+                              return filtered.map((ex, i) => ({
+                                ...ex,
+                                exercise_order: i,
+                              }));
+                            });
+                            toast.success(
+                              `${exerciseToDelete.exercise.name} removed`
+                            );
+                            onClose();
+                            setExerciseToDelete(null);
+                          }
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </ModalFooter>
+                  </>
+                )}
+              </ModalContent>
+            </Modal>
+          </ClientOnly>
 
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
             <Button
