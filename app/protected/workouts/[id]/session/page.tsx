@@ -176,6 +176,11 @@ export default function WorkoutSession() {
     onClose: onCancelConfirmClose,
   } = useDisclosure();
 
+  // Add this state at the top of your component with your other states
+  const [editingWeights, setEditingWeights] = useState<{
+    [key: string]: string;
+  }>({});
+
   // Fetch user data on component mount
   useEffect(() => {
     const fetchUser = async () => {
@@ -756,14 +761,21 @@ export default function WorkoutSession() {
                           <TableCell className="p-2">
                             <Input
                               type="text"
-                              inputMode="numeric"
-                              pattern="[0-9.]*"
+                              inputMode="decimal"
+                              pattern="[0-9]*\.?[0-9]*"
+                              // Show editing value while actively editing, otherwise show converted display value
                               value={
-                                set.weight === null
-                                  ? ""
-                                  : useMetric
-                                    ? Number(set.weight).toFixed(1)
-                                    : kgToLbs(set.weight).toFixed(1)
+                                // If we're currently editing this specific input
+                                `${exerciseIndex}-${setIndex}` in editingWeights
+                                  ? editingWeights[
+                                      `${exerciseIndex}-${setIndex}`
+                                    ]
+                                  : // Otherwise show the proper converted value based on user preference
+                                    set.weight === null
+                                    ? ""
+                                    : useMetric
+                                      ? Number(set.weight).toFixed(1)
+                                      : kgToLbs(set.weight).toFixed(1)
                               }
                               size="md"
                               classNames={{
@@ -771,51 +783,84 @@ export default function WorkoutSession() {
                                 input: "text-center px-0",
                                 innerWrapper: "h-9",
                               }}
+                              onFocus={(e) => {
+                                // When focusing, initialize editing state with current display value
+                                const displayValue =
+                                  set.weight === null
+                                    ? ""
+                                    : useMetric
+                                      ? Number(set.weight).toFixed(1)
+                                      : kgToLbs(set.weight).toFixed(1);
+
+                                setEditingWeights({
+                                  ...editingWeights,
+                                  [`${exerciseIndex}-${setIndex}`]:
+                                    displayValue,
+                                });
+                              }}
                               onChange={(e) => {
                                 const inputValue = e.target.value;
 
+                                // Allow empty input
                                 if (inputValue === "") {
-                                  const newExercises = [...sessionExercises];
-                                  newExercises[exerciseIndex].actualSets[
-                                    setIndex
-                                  ].weight = null;
-                                  setSessionExercises(newExercises);
+                                  setEditingWeights({
+                                    ...editingWeights,
+                                    [`${exerciseIndex}-${setIndex}`]: "",
+                                  });
                                   return;
                                 }
 
-                                if (!/^\d*\.?\d*$/.test(inputValue)) {
-                                  return;
+                                // Allow any input that could be a valid decimal number
+                                if (/^\d*\.?\d*$/.test(inputValue)) {
+                                  // Store exactly what the user types during editing
+                                  setEditingWeights({
+                                    ...editingWeights,
+                                    [`${exerciseIndex}-${setIndex}`]:
+                                      inputValue,
+                                  });
                                 }
-
-                                const numValue = Number(inputValue);
-                                const newExercises = [...sessionExercises];
-                                newExercises[exerciseIndex].actualSets[
-                                  setIndex
-                                ].weight = numValue;
-                                setSessionExercises(newExercises);
                               }}
                               onBlur={(e) => {
                                 const inputValue = e.target.value;
 
-                                if (inputValue === "") {
+                                // Handle special case of just a decimal point
+                                if (inputValue === "." || inputValue === "") {
                                   const newExercises = [...sessionExercises];
                                   newExercises[exerciseIndex].actualSets[
                                     setIndex
                                   ].weight = 0;
                                   setSessionExercises(newExercises);
+
+                                  // Clear editing state
+                                  const newEditingWeights = {
+                                    ...editingWeights,
+                                  };
+                                  delete newEditingWeights[
+                                    `${exerciseIndex}-${setIndex}`
+                                  ];
+                                  setEditingWeights(newEditingWeights);
                                   return;
                                 }
 
-                                const numValue = Number(inputValue) || 0;
+                                // Parse value and convert to kg for storage if needed
+                                const numValue = parseFloat(inputValue) || 0;
                                 const storageValue = useMetric
                                   ? numValue
                                   : lbsToKg(numValue);
 
+                                // Update the actual exercise data
                                 const newExercises = [...sessionExercises];
                                 newExercises[exerciseIndex].actualSets[
                                   setIndex
                                 ].weight = storageValue;
                                 setSessionExercises(newExercises);
+
+                                // Clear editing state
+                                const newEditingWeights = { ...editingWeights };
+                                delete newEditingWeights[
+                                  `${exerciseIndex}-${setIndex}`
+                                ];
+                                setEditingWeights(newEditingWeights);
                               }}
                             />
                           </TableCell>
