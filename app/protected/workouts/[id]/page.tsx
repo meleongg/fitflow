@@ -7,6 +7,7 @@ import PageTitle from "@/components/ui/page-title";
 import { useSession } from "@/contexts/SessionContext";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { createClient } from "@/utils/supabase/client";
+import { convertFromStorageUnit } from "@/utils/units";
 import {
   Button,
   Card,
@@ -420,7 +421,12 @@ export default function ViewWorkout() {
                                 {item.reps}
                               </TableCell>
                               <TableCell className="text-center">
-                                {item.weight > 0 ? item.weight : "-"}
+                                {item.weight > 0
+                                  ? convertFromStorageUnit(
+                                      item.weight,
+                                      useMetric
+                                    ).toFixed(1)
+                                  : "-"}
                               </TableCell>
                             </TableRow>
                           ))}
