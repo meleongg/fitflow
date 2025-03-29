@@ -34,11 +34,15 @@ import {
 import {
   ArrowDown,
   ArrowUp,
+  Check,
+  ChevronUp,
   Dumbbell,
   FileText,
   Plus,
+  Search,
   Trash2,
   WifiOff,
+  X,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -762,19 +766,7 @@ export default function WorkoutSession() {
               isIconOnly
               onPress={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m18 15-6-6-6 6" />
-              </svg>
+              <ChevronUp className="h-4 w-4" />
             </Button>
             <span className="font-semibold truncate max-w-[200px]">
               {workout?.name}
@@ -811,6 +803,54 @@ export default function WorkoutSession() {
             <h2 className="text-2xl font-bold">{workout.name}</h2>
             <div className="flex gap-2">
               <Timer />
+            </div>
+          </div>
+
+          {/* Add this progress indicator above the exercise cards */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-500">Overall progress</span>
+              <span className="text-sm font-semibold">
+                {Math.round(
+                  (sessionExercises.reduce(
+                    (acc, ex) =>
+                      acc + ex.actualSets.filter((set) => set.completed).length,
+                    0
+                  ) /
+                    Math.max(
+                      1,
+                      sessionExercises.reduce(
+                        (acc, ex) => acc + ex.actualSets.length,
+                        0
+                      )
+                    )) *
+                    100
+                )}
+                %
+              </span>
+            </div>
+            <div className="w-full bg-default-200 rounded-full h-2.5 dark:bg-gray-700">
+              <div
+                className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                style={{
+                  width: `${
+                    (sessionExercises.reduce(
+                      (acc, ex) =>
+                        acc +
+                        ex.actualSets.filter((set) => set.completed).length,
+                      0
+                    ) /
+                      Math.max(
+                        1,
+                        sessionExercises.reduce(
+                          (acc, ex) => acc + ex.actualSets.length,
+                          0
+                        )
+                      )) *
+                    100
+                  }%`,
+                }}
+              ></div>
             </div>
           </div>
 
@@ -919,6 +959,30 @@ export default function WorkoutSession() {
                     <h3 className="text-xl font-bold break-words">
                       {exercise.name}
                     </h3>
+
+                    <div className="ml-2 flex items-center gap-2">
+                      <div className="w-16 bg-default-200 rounded-full h-1.5 dark:bg-gray-700">
+                        <div
+                          className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${
+                              (exercise.actualSets.filter(
+                                (set) => set.completed
+                              ).length /
+                                Math.max(1, exercise.actualSets.length)) *
+                              100
+                            }%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {
+                          exercise.actualSets.filter((set) => set.completed)
+                            .length
+                        }
+                        /{exercise.actualSets.length}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
@@ -1288,27 +1352,35 @@ export default function WorkoutSession() {
             </Button>
           </div>
 
-          <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <Button
-              color="success"
-              size="lg"
-              type="submit"
-              className="w-full"
-              isLoading={completingWorkout}
-              onPress={() => setCompletingWorkout(true)}
-            >
-              {completingWorkout ? "Saving..." : "Complete Workout"}
-            </Button>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 mb-16 sticky bottom-4 z-40">
+            <div className="w-full bg-background/80 backdrop-blur-md p-4 rounded-lg shadow-lg border">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  color="success"
+                  size="lg"
+                  type="submit"
+                  className="w-full"
+                  isLoading={completingWorkout}
+                  onClick={() => setCompletingWorkout(true)}
+                  startContent={
+                    !completingWorkout && <Check className="h-5 w-5" />
+                  }
+                >
+                  {completingWorkout ? "Saving..." : "Complete Workout"}
+                </Button>
 
-            <Button
-              color="danger"
-              size="lg"
-              variant="flat"
-              className="w-full"
-              onPress={onCancelConfirmOpen} // Open the modal instead of showing native confirm
-            >
-              Cancel Workout
-            </Button>
+                <Button
+                  color="danger"
+                  size="lg"
+                  variant="flat"
+                  className="w-full"
+                  onPress={onCancelConfirmOpen}
+                  startContent={<X className="h-5 w-5" />}
+                >
+                  Cancel Workout
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </Form>
@@ -1379,27 +1451,7 @@ export default function WorkoutSession() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="flex-1"
-                    startContent={
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                      >
-                        <path
-                          d="M6.5 12C9.53757 12 12 9.53757 12 6.5C12 3.46243 9.53757 1 6.5 1C3.46243 1 1 3.46243 1 6.5C1 9.53757 3.46243 12 6.5 12Z"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M11 11L15 15"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    }
+                    startContent={<Search className="h-4 w-4" />}
                     isClearable
                     onClear={() => setSearchQuery("")}
                   />
