@@ -18,8 +18,6 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
-  Select,
-  SelectItem,
   Spinner,
   Table,
   TableBody,
@@ -29,6 +27,15 @@ import {
   TableRow,
   useDisclosure,
 } from "@nextui-org/react";
+import {
+  Check,
+  ExternalLink,
+  FileText,
+  Plus,
+  Trash2,
+  WifiOff,
+  X,
+} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -55,7 +62,8 @@ const getWorkoutExercises = async (supabase: any, workoutId: string) => {
       exercise:exercises(*)
     `
     )
-    .eq("workout_id", workoutId);
+    .eq("workout_id", workoutId)
+    .order("exercise_order", { ascending: true }); // Add this line to ensure correct order
 
   if (error) throw error;
 
@@ -66,7 +74,7 @@ const getWorkoutExercises = async (supabase: any, workoutId: string) => {
     sets: we.sets,
     reps: we.reps,
     weight: we.weight,
-    exercise_order: we.exercise_order,
+    exercise_order: we.exercise_order, // Include this field
     category_id: we.exercise.category_id,
     description: we.exercise.description,
   }));
@@ -160,6 +168,13 @@ export default function WorkoutSession() {
   const [customExerciseError, setCustomExerciseError] = useState<string | null>(
     null
   );
+
+  // Add these state variables with your other useDisclosure hooks
+  const {
+    isOpen: isCancelConfirmOpen,
+    onOpen: onCancelConfirmOpen,
+    onClose: onCancelConfirmClose,
+  } = useDisclosure();
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -584,215 +599,65 @@ export default function WorkoutSession() {
   if (!workout) return <div>Workout not found</div>;
 
   return (
-    <div className="w-full px-2 pb-16 max-w-full overflow-x-hidden">
-      <PageTitle title={workout.name} />
-      <div className="flex items-center">
-        <BackButton url="/protected/workouts" />
+    <div className="w-full max-w-full overflow-x-hidden px-4">
+      <PageTitle title="Workout Session" />
+
+      <div className="flex items-center mb-4">
+        <BackButton url={`/protected/workouts/${workoutId}`} />
       </div>
 
-      {/* Add Timer component below the title */}
-      <div className="bg-creamyBeige p-4 rounded-lg mb-4">
-        <Timer />
+      {/* Workout heading */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+        <h2 className="text-2xl font-bold">{workout.name}</h2>
+        <div className="flex gap-2">
+          <Timer />
+        </div>
       </div>
 
-      <div className="bg-creamyBeige p-4 rounded-lg mb-4">
-        <h2 className="font-bold mb-2">Description</h2>
-        <p>{workout.description}</p>
-        <p className="text-sm text-gray-600 mt-2" suppressHydrationWarning>
-          Created: {formatDate(workout.created_at)}
+      {/* Workout description card */}
+      <div className="bg-default-50 dark:bg-default-100 p-4 rounded-lg mb-6 border border-default-200">
+        <h3 className="font-semibold mb-2">Description</h3>
+        <p>{workout.description || "No description provided."}</p>
+        <p className="text-sm text-gray-500 mt-2" suppressHydrationWarning>
+          Session started: {new Date(sessionStartTime || "").toLocaleString()}
         </p>
       </div>
+
+      {!isOnline && (
+        <div className="bg-yellow-100 text-yellow-800 p-4 rounded-lg mb-6 border border-yellow-200">
+          <div className="flex items-center gap-2">
+            <WifiOff className="h-5 w-5" />
+            <p className="font-medium">
+              You're offline. Your workout will be saved locally and synced when
+              back online.
+            </p>
+          </div>
+        </div>
+      )}
+
       <Form
         className="w-full max-w-full justify-center items-center space-y-4"
         validationBehavior="native"
         onReset={() => setSubmitted(null)}
         onSubmit={onSessionSubmit}
       >
-        <div className="flex flex-col gap-4 w-full">
-          {/* Modal for Selecting Exercises - Updated */}
-          <Modal
-            backdrop="opaque"
-            isOpen={isOpen}
-            onClose={onClose}
-            radius="lg"
-            onOpenChange={onOpenChange}
-            placement="center"
-            scrollBehavior="inside"
-            classNames={{
-              base: "m-0 mx-auto",
-              wrapper: "items-center justify-center p-2",
-            }}
-          >
-            <ModalContent className="max-w-[95vw] sm:max-w-md">
-              {(onClose) => (
-                <>
-                  <ModalHeader>
-                    <h3 className="text-lg font-bold">Select Exercise</h3>
-                  </ModalHeader>
-                  <ModalBody>
-                    <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                      {/* Search input */}
-                      <Input
-                        type="search"
-                        placeholder="Search exercises..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1"
-                        startContent={
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 16 16"
-                            fill="none"
-                          >
-                            <path
-                              d="M6.5 12C9.53757 12 12 9.53757 12 6.5C12 3.46243 9.53757 1 6.5 1C3.46243 1 1 3.46243 1 6.5C1 9.53757 3.46243 12 6.5 12Z"
-                              stroke="currentColor"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M11 11L15 15"
-                              stroke="currentColor"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        }
-                        isClearable
-                        onClear={() => setSearchQuery("")}
-                      />
-
-                      {/* Category filter */}
-                      <Select
-                        label="Category" // Add this line to provide a visible label
-                        placeholder="Filter by category"
-                        selectedKeys={[categoryFilter]}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="sm:w-1/3"
-                        size="sm"
-                      >
-                        <>
-                          <SelectItem key="all" value="all">
-                            All Categories
-                          </SelectItem>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </>
-                      </Select>
-                    </div>
-
-                    {/* Rest of your table content */}
-                    <Table aria-label="Available Exercises">
-                      {/* ... existing table code ... */}
-                    </Table>
-                  </ModalBody>
-                  <ModalFooter>
-                    <Button color="secondary" onPress={onClose}>
-                      Close
-                    </Button>
-                  </ModalFooter>
-                </>
-              )}
-            </ModalContent>
-          </Modal>
-
-          {/* Modal for Adding Custom Exercise - Updated */}
-          <Modal
-            backdrop="opaque"
-            isOpen={isCustomOpen}
-            onClose={onCustomClose}
-            radius="lg"
-            onOpenChange={onCustomOpenChange}
-            placement="center"
-            scrollBehavior="inside"
-            classNames={{
-              base: "m-0 mx-auto",
-              wrapper: "items-center justify-center p-2",
-            }}
-          >
-            <ModalContent className="max-w-[95vw] sm:max-w-md">
-              {(onCustomClose) => (
-                <>
-                  <ModalHeader>
-                    <h3 className="text-lg font-bold">Add Custom Exercise</h3>
-                  </ModalHeader>
-                  <ModalBody>
-                    <div className="bg-yellow-100 text-yellow-700 p-2 rounded mb-4">
-                      <strong>NOTE:</strong> Creating a custom exercise here
-                      will add it to your Exercise Library.
-                    </div>
-
-                    <form
-                      onSubmit={handleCustomExerciseSubmit}
-                      className="space-y-4"
-                    >
-                      <Input
-                        isRequired
-                        label="Exercise Name"
-                        name="exerciseName"
-                        placeholder="Enter exercise name"
-                        isInvalid={!!customExerciseError}
-                        errorMessage={customExerciseError}
-                        onChange={() =>
-                          customExerciseError && setCustomExerciseError(null)
-                        }
-                      />
-
-                      {/* Dropdown for categories */}
-                      <Select
-                        isRequired
-                        label="Category"
-                        placeholder="Select a category"
-                        value={selectedCategory}
-                        onChange={(e) =>
-                          setSelectedCategory(Number(e.target.value))
-                        }
-                        name="exerciseCategory"
-                      >
-                        <>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </>
-                      </Select>
-
-                      <Input
-                        label="Description"
-                        name="exerciseDescription"
-                        placeholder="Optional description"
-                        type="text"
-                      />
-
-                      <Button type="submit" color="primary" className="w-full">
-                        Add Exercise
-                      </Button>
-                    </form>
-                    {customExerciseError && (
-                      <div className="text-red-500 mt-2">
-                        {customExerciseError}
-                      </div>
-                    )}
-                  </ModalBody>
-                  <ModalFooter>
-                    <Button color="secondary" onPress={onCustomClose}>
-                      Close
-                    </Button>
-                  </ModalFooter>
-                </>
-              )}
-            </ModalContent>
-          </Modal>
-          <div className="w-full">
-            {sessionExercises.map((exercise, exerciseIndex) => (
+        <div className="flex flex-col gap-6 w-full">
+          {/* Exercise cards */}
+          {sessionExercises.length === 0 ? (
+            <div className="text-center py-12 border rounded-lg">
+              <div className="flex flex-col items-center gap-3 text-gray-500">
+                <FileText className="h-10 w-10" />
+                <p>No exercises added to this session</p>
+                <Button size="sm" color="primary" onPress={handleOpenModal}>
+                  Add Your First Exercise
+                </Button>
+              </div>
+            </div>
+          ) : (
+            sessionExercises.map((exercise, exerciseIndex) => (
               <div
                 key={exercise.id}
-                className="mb-8 bg-white p-3 sm:p-4 rounded-lg shadow w-full overflow-hidden"
+                className="bg-default-50 dark:bg-default-100 p-4 rounded-lg shadow-sm border border-default-200"
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
                   <h3 className="text-xl font-bold break-words">
@@ -806,23 +671,24 @@ export default function WorkoutSession() {
                     <Button
                       color="danger"
                       size="sm"
-                      variant="ghost"
+                      variant="light"
+                      startContent={<Trash2 className="h-4 w-4" />}
                       onPress={() => handleDeleteExercise(exerciseIndex)}
                     >
-                      Delete
+                      Remove
                     </Button>
                   </div>
                 </div>
 
-                <div className="w-full overflow-x-auto -mx-1 px-1">
+                <div className="w-full overflow-x-auto -mx-2 px-2">
                   <Table
                     aria-label={`${exercise.name} sets`}
                     classNames={{
-                      wrapper: "min-w-full",
+                      base: "min-w-full",
                       table: "min-w-full",
                     }}
                   >
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-white dark:bg-gray-900">
                       <TableColumn className="w-[80px] min-w-[80px]">
                         SET
                       </TableColumn>
@@ -844,10 +710,9 @@ export default function WorkoutSession() {
                           </TableCell>
                           <TableCell className="p-2">
                             <Input
-                              type="text" // Changed from number to text
+                              type="text"
                               inputMode="numeric"
                               pattern="[0-9]*"
-                              // Use empty string for display if value is null
                               value={set.reps === null ? "" : String(set.reps)}
                               size="md"
                               classNames={{
@@ -858,7 +723,6 @@ export default function WorkoutSession() {
                               onChange={(e) => {
                                 const inputValue = e.target.value;
 
-                                // Important: Allow EMPTY input by updating state with null
                                 if (inputValue === "") {
                                   const newExercises = [...sessionExercises];
                                   newExercises[exerciseIndex].actualSets[
@@ -868,7 +732,6 @@ export default function WorkoutSession() {
                                   return;
                                 }
 
-                                // Only allow digits
                                 if (!/^\d+$/.test(inputValue)) {
                                   return;
                                 }
@@ -881,7 +744,6 @@ export default function WorkoutSession() {
                                 setSessionExercises(newExercises);
                               }}
                               onBlur={(e) => {
-                                // When focus leaves, ensure valid value (min 0)
                                 const newValue = parseInt(e.target.value) || 0;
                                 const newExercises = [...sessionExercises];
                                 newExercises[exerciseIndex].actualSets[
@@ -893,10 +755,9 @@ export default function WorkoutSession() {
                           </TableCell>
                           <TableCell className="p-2">
                             <Input
-                              type="text" // Changed from number to text
+                              type="text"
                               inputMode="numeric"
-                              pattern="[0-9.]*" // Allow decimal points
-                              // Format the value properly
+                              pattern="[0-9.]*"
                               value={
                                 set.weight === null
                                   ? ""
@@ -906,14 +767,13 @@ export default function WorkoutSession() {
                               }
                               size="md"
                               classNames={{
-                                base: "min-w-[90px] max-w-[90px]",
-                                input: "text-center",
+                                base: "min-w-[90px] w-[90px]",
+                                input: "text-center px-0",
                                 innerWrapper: "h-9",
                               }}
                               onChange={(e) => {
                                 const inputValue = e.target.value;
 
-                                // Always allow empty input
                                 if (inputValue === "") {
                                   const newExercises = [...sessionExercises];
                                   newExercises[exerciseIndex].actualSets[
@@ -923,12 +783,10 @@ export default function WorkoutSession() {
                                   return;
                                 }
 
-                                // Allow digits and at most one decimal point
                                 if (!/^\d*\.?\d*$/.test(inputValue)) {
                                   return;
                                 }
 
-                                // For now store the parsed number directly
                                 const numValue = Number(inputValue);
                                 const newExercises = [...sessionExercises];
                                 newExercises[exerciseIndex].actualSets[
@@ -939,7 +797,6 @@ export default function WorkoutSession() {
                               onBlur={(e) => {
                                 const inputValue = e.target.value;
 
-                                // If empty, set to 0
                                 if (inputValue === "") {
                                   const newExercises = [...sessionExercises];
                                   newExercises[exerciseIndex].actualSets[
@@ -949,7 +806,6 @@ export default function WorkoutSession() {
                                   return;
                                 }
 
-                                // Otherwise parse and convert
                                 const numValue = Number(inputValue) || 0;
                                 const storageValue = useMetric
                                   ? numValue
@@ -963,11 +819,11 @@ export default function WorkoutSession() {
                               }}
                             />
                           </TableCell>
-                          <TableCell className="p-2">
+                          <TableCell className="p-2 flex gap-1">
                             <Button
                               color={set.completed ? "success" : "primary"}
                               size="sm"
-                              className="w-full min-w-[110px]"
+                              className="flex-1 min-w-[80px]"
                               onPress={() => {
                                 const newExercises = [...sessionExercises];
                                 const wasCompleted =
@@ -979,7 +835,6 @@ export default function WorkoutSession() {
                                 ].completed = !wasCompleted;
                                 setSessionExercises(newExercises);
 
-                                // Only show toast when marking as complete (not when unmarking)
                                 if (!wasCompleted) {
                                   toast.success(
                                     `Set ${set.setNumber} completed!`
@@ -989,6 +844,55 @@ export default function WorkoutSession() {
                             >
                               {set.completed ? "Completed" : "Mark Complete"}
                             </Button>
+
+                            {/* Add this remove button */}
+                            <Button
+                              isIconOnly
+                              color="danger"
+                              variant="light"
+                              size="sm"
+                              onPress={() => {
+                                // Don't allow removing if it's the only set
+                                if (exercise.actualSets.length <= 1) {
+                                  toast.error("Cannot remove the only set");
+                                  return;
+                                }
+
+                                // Create new exercises array
+                                const newExercises = [...sessionExercises];
+
+                                // Remove the set at the specified index
+                                newExercises[exerciseIndex].actualSets.splice(
+                                  setIndex,
+                                  1
+                                );
+
+                                // Renumber the remaining sets
+                                newExercises[exerciseIndex].actualSets =
+                                  newExercises[exerciseIndex].actualSets.map(
+                                    (set, idx) => ({
+                                      ...set,
+                                      setNumber: idx + 1,
+                                    })
+                                  );
+
+                                // Update state
+                                setSessionExercises(newExercises);
+
+                                // Show confirmation toast
+                                toast.success(
+                                  `Set removed from ${exercise.name}`
+                                );
+                              }}
+                              className={
+                                exercise.actualSets.length <= 1
+                                  ? "opacity-50"
+                                  : ""
+                              }
+                              isDisabled={exercise.actualSets.length <= 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -996,9 +900,11 @@ export default function WorkoutSession() {
                   </Table>
                 </div>
 
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4">
                   <Button
                     size="sm"
+                    variant="flat"
+                    startContent={<Plus className="h-4 w-4" />}
                     onPress={() => {
                       const newExercises = [...sessionExercises];
                       const newSetNumber = exercise.actualSets.length + 1;
@@ -1018,71 +924,96 @@ export default function WorkoutSession() {
                   </Button>
                 </div>
               </div>
-            ))}
+            ))
+          )}
 
-            <div className="flex flex-col sm:flex-row gap-3 mt-4">
-              <Button
-                color="primary"
-                className="w-full sm:w-auto"
-                onPress={handleOpenModal} // Change from onOpen to handleOpenModal
-              >
-                Add Exercise
-              </Button>
-              <Button
-                color="secondary"
-                className="w-full sm:w-auto"
-                onPress={onCustomOpen}
-              >
-                Add Custom Exercise
-              </Button>
-            </div>
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <Button
+              color="primary"
+              className="w-full sm:w-auto"
+              startContent={<Plus className="h-4 w-4" />}
+              onPress={handleOpenModal}
+              type="button"
+            >
+              Add Exercise
+            </Button>
+            <Button
+              color="secondary"
+              className="w-full sm:w-auto"
+              startContent={<ExternalLink className="h-4 w-4" />}
+              onPress={onCustomOpen}
+              type="button"
+            >
+              Add Custom Exercise
+            </Button>
+          </div>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Button
-                color="success"
-                size="lg"
-                type="submit"
-                className="w-full"
-              >
-                Complete Workout
-              </Button>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <Button
+              color="success"
+              size="lg"
+              type="submit"
+              className="w-full"
+              startContent={<Check className="h-4 w-4" />}
+            >
+              Complete Workout
+            </Button>
 
-              <Button
-                color="danger"
-                size="lg"
-                variant="flat"
-                className="w-full"
-                onPress={() => {
-                  if (
-                    confirm(
-                      "Are you sure you want to cancel this workout? Progress will be lost."
-                    )
-                  ) {
-                    toast.info("Workout cancelled");
-
-                    // Clear timer storage
-                    localStorage.removeItem(TIMER_STORAGE_KEY);
-
-                    // End the session context
-                    endSession();
-
-                    // Navigate back to workout library
-                    router.push("/protected/workouts");
-                  }
-                }}
-              >
-                Cancel Workout
-              </Button>
-            </div>
+            <Button
+              color="danger"
+              size="lg"
+              variant="flat"
+              className="w-full"
+              startContent={<X className="h-4 w-4" />}
+              onPress={onCancelConfirmOpen} // Open the modal instead of showing native confirm
+            >
+              Cancel Workout
+            </Button>
           </div>
         </div>
       </Form>
-      {!isOnline && (
-        <div className="bg-yellow-100 p-4 rounded-md mb-4">
-          You're offline. Your workout will be saved locally and synced when
-          back online.
-        </div>
-      )}
+
+      {/* Add this modal at the end of your component, before the closing return tag */}
+      <Modal
+        backdrop="opaque"
+        isOpen={isCancelConfirmOpen}
+        onClose={onCancelConfirmClose}
+        className="dark:bg-gray-900"
+        placement="center"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Cancel Workout
+              </ModalHeader>
+              <ModalBody>
+                <p>
+                  Are you sure you want to cancel this workout? Progress will be
+                  lost.
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose}>
+                  Keep Working
+                </Button>
+                <Button
+                  color="danger"
+                  onPress={() => {
+                    toast.info("Workout cancelled");
+                    localStorage.removeItem(TIMER_STORAGE_KEY);
+                    endSession();
+                    router.push("/protected/workouts");
+                    onClose();
+                  }}
+                >
+                  Yes, Cancel Workout
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
