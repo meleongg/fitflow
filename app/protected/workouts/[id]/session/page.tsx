@@ -18,6 +18,9 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Pagination,
+  Select,
+  SelectItem,
   Spinner,
   Table,
   TableBody,
@@ -28,13 +31,13 @@ import {
   useDisclosure,
 } from "@nextui-org/react";
 import {
-  Check,
-  ExternalLink,
+  ArrowDown,
+  ArrowUp,
+  Dumbbell,
   FileText,
   Plus,
   Trash2,
   WifiOff,
-  X,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -665,9 +668,73 @@ export default function WorkoutSession() {
                 className="bg-default-50 dark:bg-default-100 p-4 rounded-lg shadow-sm border border-default-200"
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
-                  <h3 className="text-xl font-bold break-words">
-                    {exercise.name}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    {/* Add reorder buttons */}
+                    <div className="flex flex-col gap-1">
+                      <Button
+                        size="sm"
+                        isIconOnly
+                        variant="light"
+                        isDisabled={exerciseIndex === 0}
+                        onPress={() => {
+                          setSessionExercises((prev) => {
+                            const newExercises = [...prev];
+                            if (exerciseIndex > 0) {
+                              // Swap with previous exercise
+                              [
+                                newExercises[exerciseIndex],
+                                newExercises[exerciseIndex - 1],
+                              ] = [
+                                newExercises[exerciseIndex - 1],
+                                newExercises[exerciseIndex],
+                              ];
+                            }
+                            return newExercises;
+                          });
+                          if (exerciseIndex > 0) {
+                            toast.success(`${exercise.name} moved up`);
+                          }
+                        }}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        isIconOnly
+                        variant="light"
+                        isDisabled={
+                          exerciseIndex === sessionExercises.length - 1
+                        }
+                        onPress={() => {
+                          setSessionExercises((prev) => {
+                            const newExercises = [...prev];
+                            if (exerciseIndex < newExercises.length - 1) {
+                              // Swap with next exercise
+                              [
+                                newExercises[exerciseIndex],
+                                newExercises[exerciseIndex + 1],
+                              ] = [
+                                newExercises[exerciseIndex + 1],
+                                newExercises[exerciseIndex],
+                              ];
+                            }
+                            return newExercises;
+                          });
+                          if (exerciseIndex < sessionExercises.length - 1) {
+                            toast.success(`${exercise.name} moved down`);
+                          }
+                        }}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Exercise name */}
+                    <h3 className="text-xl font-bold break-words">
+                      {exercise.name}
+                    </h3>
+                  </div>
+
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                     <div className="text-sm text-gray-600">
                       Target: {exercise.targetSets} sets × {exercise.targetReps}{" "}
@@ -985,7 +1052,7 @@ export default function WorkoutSession() {
             <Button
               color="secondary"
               className="w-full sm:w-auto"
-              startContent={<ExternalLink className="h-4 w-4" />}
+              startContent={<Dumbbell className="h-4 w-4" />} // Changed from ExternalLink to Dumbbell
               onPress={onCustomOpen}
               type="button"
             >
@@ -994,13 +1061,7 @@ export default function WorkoutSession() {
           </div>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <Button
-              color="success"
-              size="lg"
-              type="submit"
-              className="w-full"
-              startContent={<Check className="h-4 w-4" />}
-            >
+            <Button color="success" size="lg" type="submit" className="w-full">
               Complete Workout
             </Button>
 
@@ -1009,7 +1070,6 @@ export default function WorkoutSession() {
               size="lg"
               variant="flat"
               className="w-full"
-              startContent={<X className="h-4 w-4" />}
               onPress={onCancelConfirmOpen} // Open the modal instead of showing native confirm
             >
               Cancel Workout
@@ -1053,6 +1113,238 @@ export default function WorkoutSession() {
                   }}
                 >
                   Yes, Cancel Workout
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Add/fix the Exercise Selection Modal */}
+      <Modal
+        backdrop="opaque"
+        isOpen={isOpen}
+        onClose={onClose}
+        scrollBehavior="inside"
+        size="lg"
+        placement="center"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Select Exercise
+              </ModalHeader>
+              <ModalBody>
+                <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                  {/* Search input */}
+                  <Input
+                    type="search"
+                    placeholder="Search exercises..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1"
+                    startContent={
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                      >
+                        <path
+                          d="M6.5 12C9.53757 12 12 9.53757 12 6.5C12 3.46243 9.53757 1 6.5 1C3.46243 1 1 3.46243 1 6.5C1 9.53757 3.46243 12 6.5 12Z"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M11 11L15 15"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    }
+                    isClearable
+                    onClear={() => setSearchQuery("")}
+                  />
+
+                  {/* Category filter */}
+                  <Select
+                    aria-label="Filter exercises by category"
+                    placeholder="Filter by category"
+                    selectedKeys={[categoryFilter]}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="sm:w-1/3"
+                    size="sm"
+                  >
+                    <>
+                      <SelectItem key="all" value="all">
+                        All Categories
+                      </SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </>
+                  </Select>
+                </div>
+
+                <Table
+                  aria-label="Available Exercises"
+                  classNames={{
+                    base: "max-w-full overflow-x-auto",
+                  }}
+                >
+                  <TableHeader>
+                    <TableColumn>NAME</TableColumn>
+                    <TableColumn>CATEGORY</TableColumn>
+                    <TableColumn>ACTION</TableColumn>
+                  </TableHeader>
+                  <TableBody
+                    emptyContent={
+                      <div className="py-5">
+                        <p className="text-center text-gray-500">
+                          No exercises found
+                        </p>
+                      </div>
+                    }
+                  >
+                    {exercises.map((exercise) => (
+                      <TableRow key={exercise.id}>
+                        <TableCell>{exercise.name}</TableCell>
+                        <TableCell>
+                          {exercise.categories?.name || "Uncategorized"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            color="primary"
+                            onPress={() => {
+                              const newExercise = {
+                                id: exercise.id,
+                                name: exercise.name,
+                                targetSets: 3,
+                                targetReps: 10,
+                                targetWeight: 0,
+                                actualSets: Array.from(
+                                  { length: 3 },
+                                  (_, i) => ({
+                                    setNumber: i + 1,
+                                    reps: 0,
+                                    weight: 0,
+                                    completed: false,
+                                  })
+                                ),
+                              };
+
+                              setSessionExercises((prev) => [
+                                ...prev,
+                                newExercise,
+                              ]);
+                              toast.success(
+                                `${exercise.name} added to workout`
+                              );
+                              onClose();
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                <Pagination
+                  className="mt-4"
+                  total={totalPages}
+                  initialPage={1}
+                  page={currentPage}
+                  onChange={(page) => setCurrentPage(page)}
+                />
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose}>
+                  Cancel
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Add/fix Custom Exercise Modal */}
+      <Modal
+        backdrop="opaque"
+        isOpen={isCustomOpen}
+        onClose={onCustomClose}
+        className="dark:bg-gray-900"
+        placement="center"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Add Custom Exercise
+              </ModalHeader>
+              <ModalBody>
+                <div className="bg-yellow-100 text-yellow-700 p-2 rounded mb-4">
+                  <strong>NOTE:</strong> Creating a custom exercise here will
+                  add it to your Exercise Library.
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCustomExerciseSubmit(e);
+                  }}
+                  className="space-y-4"
+                >
+                  <Input
+                    isRequired
+                    label="Exercise Name"
+                    name="exerciseName"
+                    placeholder="Enter exercise name"
+                    errorMessage={customExerciseError}
+                  />
+
+                  <Select
+                    isRequired
+                    label="Category"
+                    placeholder="Select a category"
+                    value={selectedCategory}
+                    onChange={(e) =>
+                      setSelectedCategory(Number(e.target.value))
+                    }
+                    name="exerciseCategory"
+                  >
+                    <>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </>
+                  </Select>
+
+                  <Input
+                    label="Description"
+                    name="exerciseDescription"
+                    placeholder="Optional description"
+                    type="text"
+                  />
+
+                  <Button type="submit" color="primary" className="w-full">
+                    Add Exercise
+                  </Button>
+                </form>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose}>
+                  Cancel
                 </Button>
               </ModalFooter>
             </>
