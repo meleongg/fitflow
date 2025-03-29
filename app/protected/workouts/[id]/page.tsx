@@ -224,14 +224,15 @@ export default function ViewWorkout() {
     <div className="p-4 space-y-6">
       <ActiveSessionBanner />
 
-      <div className="flex items-center mb-2">
+      <PageTitle title={workout.name} />
+
+      <div className="flex items-center mb-4">
         <BackButton url="/protected/workouts" />
       </div>
 
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
         <div>
-          <PageTitle title={workout.name} />
-          <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+          <div className="text-sm text-gray-500 flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             <span>
               Created {new Date(workout.created_at).toLocaleDateString()}

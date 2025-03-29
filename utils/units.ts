@@ -23,6 +23,14 @@ export const convertToStorageUnit = (
   return isInMetric ? weight : lbsToKg(weight);
 };
 
+// Convert storage weight (kg) back to display unit
+export const convertFromStorageUnit = (
+  weight: number,
+  isInMetric: boolean
+): number => {
+  return isInMetric ? weight : kgToLbs(weight);
+};
+
 // In your utils/units.ts file
 export const displayWeight = (weight: number, useMetric: boolean): string => {
   const value = useMetric ? weight : kgToLbs(weight);
