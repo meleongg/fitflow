@@ -18,9 +18,7 @@ FitFlow is a full-stack web application that helps users track their fitness pro
 - **Analytics Dashboard** - Interactive charts showing weight/volume progression and PRs
 - **Responsive Design** - Optimized for both desktop and mobile use
 
-<p align="center">
-  <img width="727" alt="image" src="https://github.com/user-attachments/assets/4d4ae4dd-37e0-4f93-9ed5-5f912f68370c" />
-</p>
+<img width="1063" alt="image" src="https://github.com/user-attachments/assets/525c3a65-a16c-4973-ae46-2900c2aac8ba" />
 
 ## Technical Highlights
 
