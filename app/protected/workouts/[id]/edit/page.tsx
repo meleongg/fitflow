@@ -258,6 +258,7 @@ export default function EditWorkout() {
     e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
+    e.stopPropagation(); // Extra protection
 
     const data = Object.fromEntries(
       new FormData(e.currentTarget as HTMLFormElement)
@@ -1007,10 +1008,10 @@ export default function EditWorkout() {
             </ClientOnly>
 
             <div className="flex flex-wrap gap-2 mt-4">
-              <Button color="primary" onPress={handleOpenModal}>
+              <Button color="primary" onPress={handleOpenModal} type="button">
                 Add Exercise
               </Button>
-              <Button color="secondary" onPress={onCustomOpen}>
+              <Button color="secondary" onPress={onCustomOpen} type="button">
                 Add Custom Exercise
               </Button>
             </div>
@@ -1202,7 +1203,11 @@ export default function EditWorkout() {
                       </div>
 
                       <form
-                        onSubmit={handleCustomExerciseSubmit}
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation(); // Stop event from bubbling up to parent form
+                          handleCustomExerciseSubmit(e);
+                        }}
                         className="space-y-4"
                       >
                         <Input
@@ -1240,7 +1245,7 @@ export default function EditWorkout() {
                         />
 
                         <Button
-                          type="submit"
+                          type="submit" // This should be type="submit" since it's for this form
                           color="primary"
                           className="w-full"
                         >
