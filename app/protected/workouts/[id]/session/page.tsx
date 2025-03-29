@@ -21,6 +21,7 @@ import {
   Pagination,
   Select,
   SelectItem,
+  Skeleton,
   Spinner,
   Table,
   TableBody,
@@ -183,6 +184,16 @@ export default function WorkoutSession() {
   const [editingWeights, setEditingWeights] = useState<{
     [key: string]: string;
   }>({});
+
+  // Add these state variables to track loading states
+  const [addingExercise, setAddingExercise] = useState<string | null>(null);
+  const [removingExercise, setRemovingExercise] = useState<string | null>(null);
+  const [addingSet, setAddingSet] = useState<string | null>(null);
+  const [removingSet, setRemovingSet] = useState<{
+    exerciseId: string;
+    setIndex: number;
+  } | null>(null);
+  const [completingWorkout, setCompletingWorkout] = useState(false);
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -433,15 +444,24 @@ export default function WorkoutSession() {
       toast.dismiss(toastId);
       toast.success(`${insertedExercise.name} added to your exercise library!`);
 
-      // Add exercise to workout
-      handleAddExercise({
+      // Add exercise directly to the current workout session
+      const newSessionExercise = {
         id: insertedExercise.id,
         name: insertedExercise.name,
-        category_id: insertedExercise.category_id,
-        description: insertedExercise.description,
-        is_default: insertedExercise.is_default,
-      });
+        targetSets: 3,
+        targetReps: 10,
+        targetWeight: 0,
+        actualSets: Array.from({ length: 3 }, (_, i) => ({
+          setNumber: i + 1,
+          reps: 0,
+          weight: 0,
+          completed: false,
+        })),
+      };
 
+      setSessionExercises((prev) => [...prev, newSessionExercise]);
+
+      // Close the modal and refresh exercise list
       onCustomClose();
       fetchExercises(currentPage);
     } catch (error: any) {
@@ -596,13 +616,111 @@ export default function WorkoutSession() {
     );
   }
 
+  // Replace the current loading state with this enhanced skeleton
+
   if (isLoading) {
     return (
-      <div className="p-4 flex justify-center items-center h-64">
-        <Spinner size="lg" />
+      <div className="w-full max-w-full overflow-x-hidden px-4 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-10 w-48 rounded-lg" /> {/* Page title */}
+          <Skeleton className="h-10 w-20 rounded-lg" />{" "}
+          {/* Timer placeholder */}
+        </div>
+
+        <div className="flex items-center mt-4">
+          <Skeleton className="h-9 w-24 rounded-lg" /> {/* Back button */}
+        </div>
+
+        {/* Workout heading skeleton */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 my-6">
+          <Skeleton className="h-8 w-64 rounded-lg" /> {/* Workout title */}
+          <Skeleton className="h-10 w-24 rounded-lg" /> {/* Timer */}
+        </div>
+
+        {/* Workout description card skeleton */}
+        <div className="bg-default-50 dark:bg-default-100 p-4 rounded-lg mb-6 border border-default-200">
+          <Skeleton className="h-5 w-24 mb-2 rounded-lg" />{" "}
+          {/* Description label */}
+          <Skeleton className="h-16 w-full rounded-lg" />{" "}
+          {/* Description text */}
+          <Skeleton className="h-4 w-40 mt-2 rounded-lg" /> {/* Started time */}
+        </div>
+
+        {/* Exercise cards skeletons */}
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            className="bg-default-50 dark:bg-default-100 p-4 rounded-lg shadow-sm border border-default-200 mb-6"
+          >
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-1">
+                  <Skeleton className="h-8 w-8 rounded-lg" /> {/* Up button */}
+                  <Skeleton className="h-8 w-8 rounded-lg" />{" "}
+                  {/* Down button */}
+                </div>
+                <Skeleton className="h-7 w-48 rounded-lg" />{" "}
+                {/* Exercise name */}
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <Skeleton className="h-5 w-40 rounded-lg" />{" "}
+                {/* Target sets/reps */}
+                <Skeleton className="h-9 w-24 rounded-lg" />{" "}
+                {/* Remove button */}
+              </div>
+            </div>
+
+            {/* Exercise table skeleton */}
+            <div className="overflow-x-auto">
+              <div className="flex w-full justify-between p-2 bg-default-100 dark:bg-default-200 rounded-t-lg">
+                <Skeleton className="h-6 w-20 rounded-lg" /> {/* SET */}
+                <Skeleton className="h-6 w-28 rounded-lg" /> {/* REPS */}
+                <Skeleton className="h-6 w-28 rounded-lg" /> {/* WEIGHT */}
+                <Skeleton className="h-6 w-28 rounded-lg" /> {/* STATUS */}
+              </div>
+              {[1, 2, 3].map((j) => (
+                <div
+                  key={j}
+                  className="flex w-full justify-between items-center p-3 border-b"
+                >
+                  <Skeleton className="h-6 w-12 rounded-lg" />{" "}
+                  {/* Set number */}
+                  <Skeleton className="h-9 w-20 rounded-lg" />{" "}
+                  {/* Reps input */}
+                  <Skeleton className="h-9 w-24 rounded-lg" />{" "}
+                  {/* Weight input */}
+                  <div className="flex gap-1">
+                    <Skeleton className="h-9 w-28 rounded-lg" />{" "}
+                    {/* Status button */}
+                    <Skeleton className="h-9 w-9 rounded-lg" />{" "}
+                    {/* Remove button */}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4">
+              <Skeleton className="h-9 w-28 rounded-lg" />{" "}
+              {/* Add Set button */}
+            </div>
+          </div>
+        ))}
+
+        {/* Action buttons skeleton */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          <Skeleton className="h-10 w-full sm:w-40 rounded-lg" />
+          <Skeleton className="h-10 w-full sm:w-48 rounded-lg" />
+        </div>
+
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 mb-16">
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
       </div>
     );
   }
+
   if (error) return <div className="text-red-500">{error}</div>;
   if (!workout) return <div>Workout not found</div>;
 
@@ -745,9 +863,20 @@ export default function WorkoutSession() {
                       size="sm"
                       variant="light"
                       startContent={<Trash2 className="h-4 w-4" />}
-                      onPress={() => handleDeleteExercise(exerciseIndex)}
+                      isLoading={removingExercise === exercise.id}
+                      onPress={() => {
+                        setRemovingExercise(exercise.id);
+
+                        // Add a small delay to show the loading state
+                        setTimeout(() => {
+                          handleDeleteExercise(exerciseIndex);
+                          setRemovingExercise(null);
+                        }, 300);
+                      }}
                     >
-                      Remove
+                      {removingExercise === exercise.id
+                        ? "Removing..."
+                        : "Remove"}
                     </Button>
                   </div>
                 </div>
@@ -963,6 +1092,10 @@ export default function WorkoutSession() {
                               color="danger"
                               variant="light"
                               size="sm"
+                              isLoading={
+                                removingSet?.exerciseId === exercise.id &&
+                                removingSet?.setIndex === setIndex
+                              }
                               onPress={() => {
                                 // Don't allow removing if it's the only set
                                 if (exercise.actualSets.length <= 1) {
@@ -970,31 +1103,40 @@ export default function WorkoutSession() {
                                   return;
                                 }
 
-                                // Create new exercises array
-                                const newExercises = [...sessionExercises];
-
-                                // Remove the set at the specified index
-                                newExercises[exerciseIndex].actualSets.splice(
+                                setRemovingSet({
+                                  exerciseId: exercise.id,
                                   setIndex,
-                                  1
-                                );
+                                });
 
-                                // Renumber the remaining sets
-                                newExercises[exerciseIndex].actualSets =
-                                  newExercises[exerciseIndex].actualSets.map(
-                                    (set, idx) => ({
-                                      ...set,
-                                      setNumber: idx + 1,
-                                    })
+                                setTimeout(() => {
+                                  // Create new exercises array
+                                  const newExercises = [...sessionExercises];
+
+                                  // Remove the set at the specified index
+                                  newExercises[exerciseIndex].actualSets.splice(
+                                    setIndex,
+                                    1
                                   );
 
-                                // Update state
-                                setSessionExercises(newExercises);
+                                  // Renumber the remaining sets
+                                  newExercises[exerciseIndex].actualSets =
+                                    newExercises[exerciseIndex].actualSets.map(
+                                      (set, idx) => ({
+                                        ...set,
+                                        setNumber: idx + 1,
+                                      })
+                                    );
 
-                                // Show confirmation toast
-                                toast.success(
-                                  `Set removed from ${exercise.name}`
-                                );
+                                  // Update state
+                                  setSessionExercises(newExercises);
+
+                                  // Show confirmation toast
+                                  toast.success(
+                                    `Set removed from ${exercise.name}`
+                                  );
+
+                                  setRemovingSet(null);
+                                }, 300);
                               }}
                               className={
                                 exercise.actualSets.length <= 1
@@ -1003,7 +1145,12 @@ export default function WorkoutSession() {
                               }
                               isDisabled={exercise.actualSets.length <= 1}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {removingSet?.exerciseId === exercise.id &&
+                              removingSet?.setIndex === setIndex ? (
+                                <Spinner size="sm" color="danger" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1017,19 +1164,25 @@ export default function WorkoutSession() {
                     size="sm"
                     variant="flat"
                     startContent={<Plus className="h-4 w-4" />}
+                    isLoading={addingSet === exercise.id}
                     onPress={() => {
-                      const newExercises = [...sessionExercises];
-                      const newSetNumber = exercise.actualSets.length + 1;
-                      newExercises[exerciseIndex].actualSets.push({
-                        setNumber: newSetNumber,
-                        reps: 0,
-                        weight: 0,
-                        completed: false,
-                      });
-                      setSessionExercises(newExercises);
-                      toast.info(
-                        `Set ${newSetNumber} added to ${exercise.name}`
-                      );
+                      setAddingSet(exercise.id);
+
+                      setTimeout(() => {
+                        const newExercises = [...sessionExercises];
+                        const newSetNumber = exercise.actualSets.length + 1;
+                        newExercises[exerciseIndex].actualSets.push({
+                          setNumber: newSetNumber,
+                          reps: 0,
+                          weight: 0,
+                          completed: false,
+                        });
+                        setSessionExercises(newExercises);
+                        toast.info(
+                          `Set ${newSetNumber} added to ${exercise.name}`
+                        );
+                        setAddingSet(null);
+                      }, 300);
                     }}
                   >
                     Add Set
@@ -1061,8 +1214,15 @@ export default function WorkoutSession() {
           </div>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <Button color="success" size="lg" type="submit" className="w-full">
-              Complete Workout
+            <Button
+              color="success"
+              size="lg"
+              type="submit"
+              className="w-full"
+              isLoading={completingWorkout}
+              onPress={() => setCompletingWorkout(true)}
+            >
+              {completingWorkout ? "Saving..." : "Complete Workout"}
             </Button>
 
             <Button
@@ -1221,7 +1381,10 @@ export default function WorkoutSession() {
                           <Button
                             size="sm"
                             color="primary"
+                            isLoading={addingExercise === exercise.id}
                             onPress={() => {
+                              setAddingExercise(exercise.id);
+
                               const newExercise = {
                                 id: exercise.id,
                                 name: exercise.name,
@@ -1239,14 +1402,18 @@ export default function WorkoutSession() {
                                 ),
                               };
 
-                              setSessionExercises((prev) => [
-                                ...prev,
-                                newExercise,
-                              ]);
-                              toast.success(
-                                `${exercise.name} added to workout`
-                              );
-                              onClose();
+                              // Add a small delay to show the loading state
+                              setTimeout(() => {
+                                setSessionExercises((prev) => [
+                                  ...prev,
+                                  newExercise,
+                                ]);
+                                toast.success(
+                                  `${exercise.name} added to workout`
+                                );
+                                setAddingExercise(null);
+                                onClose();
+                              }, 300);
                             }}
                           >
                             Add
