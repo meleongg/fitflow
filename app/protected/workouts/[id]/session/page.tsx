@@ -41,7 +41,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 // Fetch workout data
@@ -194,6 +194,21 @@ export default function WorkoutSession() {
     setIndex: number;
   } | null>(null);
   const [completingWorkout, setCompletingWorkout] = useState(false);
+
+  // Add to your component
+  const scrollHeaderRef = useRef<HTMLDivElement>(null);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollHeaderRef.current) {
+        setIsHeaderVisible(window.scrollY > 300);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -732,34 +747,57 @@ export default function WorkoutSession() {
         <BackButton url={`/protected/workouts/${workoutId}`} />
       </div>
 
-      {/* Workout heading */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
-        <h2 className="text-2xl font-bold">{workout.name}</h2>
-        <div className="flex gap-2">
-          <Timer />
-        </div>
-      </div>
-
-      {/* Workout description card */}
-      <div className="bg-default-50 dark:bg-default-100 p-4 rounded-lg mb-6 border border-default-200">
-        <h3 className="font-semibold mb-2">Description</h3>
-        <p>{workout.description || "No description provided."}</p>
-        <p className="text-sm text-gray-500 mt-2" suppressHydrationWarning>
-          Session started: {new Date(sessionStartTime || "").toLocaleString()}
-        </p>
-      </div>
-
-      {!isOnline && (
-        <div className="bg-yellow-100 text-yellow-800 p-4 rounded-lg mb-6 border border-yellow-200">
+      {/* Add this floating header before the Form element */}
+      <div
+        ref={scrollHeaderRef}
+        className={`fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md z-50 transition-all duration-300 shadow-md border-b ${
+          isHeaderVisible ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
+        <div className="container max-w-6xl mx-auto px-4 py-2 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <WifiOff className="h-5 w-5" />
-            <p className="font-medium">
-              You're offline. Your workout will be saved locally and synced when
-              back online.
-            </p>
+            <Button
+              size="sm"
+              variant="light"
+              isIconOnly
+              onPress={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m18 15-6-6-6 6" />
+              </svg>
+            </Button>
+            <span className="font-semibold truncate max-w-[200px]">
+              {workout?.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm">
+              {sessionExercises.reduce(
+                (acc, ex) =>
+                  acc + ex.actualSets.filter((set) => set.completed).length,
+                0
+              )}
+              /
+              {sessionExercises.reduce(
+                (acc, ex) => acc + ex.actualSets.length,
+                0
+              )}{" "}
+              sets
+            </div>
+            <Timer />
           </div>
         </div>
-      )}
+      </div>
 
       <Form
         className="w-full max-w-full justify-center items-center space-y-4"
@@ -768,6 +806,36 @@ export default function WorkoutSession() {
         onSubmit={onSessionSubmit}
       >
         <div className="flex flex-col gap-6 w-full">
+          {/* Workout heading */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+            <h2 className="text-2xl font-bold">{workout.name}</h2>
+            <div className="flex gap-2">
+              <Timer />
+            </div>
+          </div>
+
+          {/* Workout description card */}
+          <div className="bg-default-50 dark:bg-default-100 p-4 rounded-lg mb-6 border border-default-200">
+            <h3 className="font-semibold mb-2">Description</h3>
+            <p>{workout.description || "No description provided."}</p>
+            <p className="text-sm text-gray-500 mt-2" suppressHydrationWarning>
+              Session started:{" "}
+              {new Date(sessionStartTime || "").toLocaleString()}
+            </p>
+          </div>
+
+          {!isOnline && (
+            <div className="bg-yellow-100 text-yellow-800 p-4 rounded-lg mb-6 border border-yellow-200">
+              <div className="flex items-center gap-2">
+                <WifiOff className="h-5 w-5" />
+                <p className="font-medium">
+                  You're offline. Your workout will be saved locally and synced
+                  when back online.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Exercise cards */}
           {sessionExercises.length === 0 ? (
             <div className="text-center py-12 border rounded-lg">
