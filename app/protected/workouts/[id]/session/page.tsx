@@ -783,7 +783,7 @@ export default function WorkoutSession() {
             sessionExercises.map((exercise, exerciseIndex) => (
               <div
                 key={exercise.id}
-                className="bg-default-50 dark:bg-default-100 p-4 rounded-lg shadow-sm border border-default-200"
+                className="bg-default-50 dark:bg-default-100 p-4 rounded-lg shadow-sm border border-default-200 transition-all duration-300 hover:shadow-md"
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
                   <div className="flex items-center gap-2">
@@ -917,7 +917,7 @@ export default function WorkoutSession() {
                               value={set.reps === null ? "" : String(set.reps)}
                               size="md"
                               classNames={{
-                                base: "min-w-[80px] w-[80px]",
+                                base: "min-w-[80px] w-[80px] transition-all duration-200",
                                 input: "text-center px-0",
                                 innerWrapper: "h-9",
                               }}
@@ -975,9 +975,12 @@ export default function WorkoutSession() {
                               }
                               size="md"
                               classNames={{
-                                base: "min-w-[90px] w-[90px]",
+                                base: "min-w-[90px] w-[90px] transition-all duration-200",
                                 input: "text-center px-0",
                                 innerWrapper: "h-9",
+                                inputWrapper: set.completed
+                                  ? "bg-success/10 border-success"
+                                  : "",
                               }}
                               onFocus={(e) => {
                                 // When focusing, initialize editing state with current display value
@@ -1064,7 +1067,11 @@ export default function WorkoutSession() {
                             <Button
                               color={set.completed ? "success" : "primary"}
                               size="sm"
-                              className="flex-1 min-w-[80px]"
+                              className={`flex-1 min-w-[80px] transition-all duration-300 ${
+                                set.completed
+                                  ? "ring-2 ring-success ring-opacity-50"
+                                  : ""
+                              }`}
                               onPress={() => {
                                 const newExercises = [...sessionExercises];
                                 const wasCompleted =
