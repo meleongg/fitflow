@@ -118,12 +118,14 @@ export default function Timer() {
       <div className="text-4xl font-mono mb-4">{formatTime(time)}</div>
       <div className="space-x-2">
         <button
+          type="button" // Add this to prevent form submission
           onClick={() => setIsRunning(!isRunning)}
           className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors"
         >
           {isRunning ? "Pause" : "Start"}
         </button>
         <button
+          type="button" // Add this to prevent form submission
           onClick={() => {
             setTime(0);
             setIsRunning(false);
