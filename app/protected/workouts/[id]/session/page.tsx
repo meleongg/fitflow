@@ -801,8 +801,23 @@ export default function WorkoutSession() {
           {/* Workout heading */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
             <h2 className="text-2xl font-bold">{workout.name}</h2>
-            <div className="flex gap-2">
-              <Timer />
+            <div className="flex gap-2 items-center">
+              {/* Session stats instead of a duplicate timer */}
+              <div className="text-sm bg-default-100 px-3 py-1 rounded-full">
+                <span className="font-medium">
+                  {sessionExercises.reduce(
+                    (acc, ex) =>
+                      acc + ex.actualSets.filter((set) => set.completed).length,
+                    0
+                  )}
+                  /
+                  {sessionExercises.reduce(
+                    (acc, ex) => acc + ex.actualSets.length,
+                    0
+                  )}
+                </span>{" "}
+                sets completed
+              </div>
             </div>
           </div>
 
