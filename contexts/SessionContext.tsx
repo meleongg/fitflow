@@ -150,15 +150,63 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     return Math.round(((currentTime - startTime) / (1000 * 60)) * 10) / 10;
   };
 
-  // Update the endSession function to be cleaner and more reliable
+  // Update the endSession function to be more thorough
   const endSession = () => {
-    // Clear state first
+    console.log("SessionContext - Ending session, current state:", {
+      contextSession: activeSession,
+      localStorage:
+        typeof window !== "undefined"
+          ? localStorage.getItem(SESSION_STORAGE_KEY)
+          : null,
+    });
+
+    // Clear React state
     setActiveSession(null);
 
-    // Remove from localStorage in a clean way
     if (typeof window !== "undefined") {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
-      localStorage.removeItem("workout-timer-state");
+      try {
+        // Clear known session-related keys
+        const keysToRemove = [
+          SESSION_STORAGE_KEY,
+          "fitflow-active-session", // Just to be sure
+          "workout-timer-state",
+          "active-session",
+          "activeWorkoutSession",
+          "workout-session",
+        ];
+
+        // Remove each key
+        keysToRemove.forEach((key) => {
+          try {
+            // First set to empty (sometimes helps with browser quirks)
+            localStorage.setItem(key, "");
+            // Then remove
+            localStorage.removeItem(key);
+
+            console.log(`Removed localStorage key: ${key}`);
+          } catch (e) {
+            console.error(`Error removing ${key}:`, e);
+          }
+        });
+
+        // Verify removal was successful
+        const remainingData = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (remainingData) {
+          console.warn(
+            "Session data still exists after removal, trying again..."
+          );
+          localStorage.setItem(SESSION_STORAGE_KEY, "");
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
+
+        // Dispatch events to ensure components update
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("session-ended"));
+
+        console.log("SessionContext - Session cleanup complete");
+      } catch (error) {
+        console.error("Error during session cleanup:", error);
+      }
     }
   };
 

@@ -21,25 +21,93 @@ export default function ActiveSessionBanner() {
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
+  // Add an extra safety check for localStorage consistency
+  const [isStorageValid, setIsStorageValid] = useState(true);
+
+  // Validate localStorage consistency on render
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sessionData = localStorage.getItem("fitflow-active-session");
+
+      // If context says no session but localStorage has data
+      if (!activeSession && sessionData) {
+        console.log(
+          "ActiveSessionBanner - Inconsistency detected: cleaning localStorage"
+        );
+        try {
+          localStorage.removeItem("fitflow-active-session");
+          localStorage.removeItem("workout-timer-state");
+        } catch (e) {
+          console.error("Error cleaning localStorage:", e);
+        }
+        setIsStorageValid(false);
+      }
+
+      // If context has session but localStorage doesn't
+      if (activeSession && !sessionData) {
+        console.log(
+          "ActiveSessionBanner - Inconsistency detected: context has session but localStorage doesn't"
+        );
+        setIsStorageValid(false);
+      }
+    }
+  }, [activeSession]);
+
+  // Debug logs whenever activeSession changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.log("ActiveSessionBanner - Session state:", {
+        hasSession: !!activeSession,
+        activeSession,
+        localStorage: {
+          hasItem: !!localStorage.getItem("fitflow-active-session"),
+          rawData: localStorage.getItem("fitflow-active-session"),
+        },
+      });
+    }
+  }, [activeSession]);
+
   // Set client-side flag to prevent hydration mismatch
   useEffect(() => {
     setIsClient(true);
+    console.log("ActiveSessionBanner - Client-side rendering enabled");
   }, []);
 
   // Calculate and update elapsed time
   useEffect(() => {
     // Don't do anything if there's no session or during SSR
-    if (!activeSession || !isClient) return;
+    if (!activeSession || !isClient) {
+      console.log("ActiveSessionBanner - Skip timer:", {
+        hasActiveSession: !!activeSession,
+        isClient,
+      });
+      return;
+    }
 
     const calculateElapsed = () => {
-      if (!activeSession?.startTime) return 0;
+      if (!activeSession?.startTime) {
+        console.warn("ActiveSessionBanner - Missing startTime in session");
+        return 0;
+      }
 
       try {
         const startTime = new Date(activeSession.startTime).getTime();
         const currentTime = Date.now();
-        return Math.floor((currentTime - startTime) / 60000); // Minutes
+        const minutes = Math.floor((currentTime - startTime) / 60000);
+
+        console.log("ActiveSessionBanner - Time calculation:", {
+          startTime: activeSession.startTime,
+          parsedStartTime: startTime,
+          currentTime,
+          elapsedMinutes: minutes,
+        });
+
+        return minutes;
       } catch (error) {
-        console.error("Error calculating elapsed time:", error);
+        console.error(
+          "ActiveSessionBanner - Error calculating elapsed time:",
+          error
+        );
         return 0;
       }
     };
@@ -58,8 +126,23 @@ export default function ActiveSessionBanner() {
   // Don't render anything during server-side rendering
   if (!isClient) return null;
 
-  // Don't render if no active session
-  if (!activeSession) return null;
+  // Don't render if context says no session OR we detected an inconsistency
+  if (!activeSession || !isStorageValid) {
+    console.log("ActiveSessionBanner - Not rendering:", {
+      hasActiveSession: !!activeSession,
+      isStorageValid,
+    });
+    return null;
+  }
+
+  // Additional defense - verify required session properties exist
+  if (!activeSession.workoutId || !activeSession.workoutName) {
+    console.log(
+      "ActiveSessionBanner - Session data incomplete:",
+      activeSession
+    );
+    return null;
+  }
 
   return (
     <div className="bg-amber-100 dark:bg-amber-900 border-l-4 border-amber-500 p-4 mb-4 shadow-md">
@@ -101,30 +184,37 @@ export default function ActiveSessionBanner() {
         size="sm"
       >
         <ModalContent>
-          <ModalHeader className="flex flex-col gap-1">
-            End Session?
-          </ModalHeader>
-          <ModalBody>
-            <p>Are you sure you want to end this workout session?</p>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              color="default"
-              variant="light"
-              onPress={() => setShowEndConfirmation(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              color="danger"
-              onPress={() => {
-                endSession();
-                setShowEndConfirmation(false);
-              }}
-            >
-              End Session
-            </Button>
-          </ModalFooter>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                End Session?
+              </ModalHeader>
+              <ModalBody>
+                <p>Are you sure you want to end this workout session?</p>
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  color="default"
+                  variant="light"
+                  onPress={() => setShowEndConfirmation(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  color="danger"
+                  onPress={() => {
+                    console.log(
+                      "ActiveSessionBanner - Ending session via banner"
+                    );
+                    endSession();
+                    setShowEndConfirmation(false);
+                  }}
+                >
+                  End Session
+                </Button>
+              </ModalFooter>
+            </>
+          )}
         </ModalContent>
       </Modal>
     </div>

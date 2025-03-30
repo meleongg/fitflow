@@ -1455,8 +1455,11 @@ export default function WorkoutSession() {
                     toast.dismiss(loadingToastId);
                     toast.success("Workout cancelled");
 
-                    // Navigate back to workouts page
-                    router.push("/protected/workouts");
+                    // Use window.location instead of router.push to force a complete page refresh
+                    setTimeout(() => {
+                      window.location.href = "/protected/workouts";
+                    }, 100);
+
                     onClose();
                   }}
                 >

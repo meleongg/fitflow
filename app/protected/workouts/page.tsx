@@ -17,16 +17,35 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Pagination,
   Skeleton,
 } from "@nextui-org/react";
-import { Calendar, Dumbbell, EllipsisVertical, Plus } from "lucide-react";
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Dumbbell,
+  EllipsisVertical,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-const getWorkoutData = async (supabase: any) => {
-  const { data } = await supabase
+// Enhanced workout data fetching with pagination
+const getWorkoutData = async (supabase: any, page = 1, pageSize = 6) => {
+  // Calculate range for pagination
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize - 1;
+
+  const countResponse = await supabase
+    .from("workouts")
+    .select("id", { count: "exact" });
+
+  const totalCount = countResponse.count || 0;
+
+  const { data, error } = await supabase
     .from("workouts")
     .select(
       `
@@ -34,10 +53,19 @@ const getWorkoutData = async (supabase: any) => {
       workout_exercises(count)
     `
     )
-    .order("created_at", { ascending: false });
-  return data;
+    .order("created_at", { ascending: false })
+    .range(start, end);
+
+  if (error) throw error;
+
+  return {
+    workouts: data,
+    totalCount,
+    totalPages: Math.ceil(totalCount / pageSize),
+  };
 };
 
+// Actions component remains largely unchanged
 const Actions = ({
   id,
   workoutName,
@@ -53,18 +81,27 @@ const Actions = ({
   const [showWarning, setShowWarning] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // If you want to handle page changes after deletion, pass these up to the parent
   const deleteWorkout = async (workoutId: string) => {
     try {
       // Show loading toast
       const toastId = toast.loading(`Deleting ${workoutName}...`);
 
       await supabase.from("workouts").delete().eq("id", workoutId);
-      const data = await getWorkoutData(supabase);
-      setWorkouts(data);
+
+      // Get updated data after deletion
+      const { workouts: updatedWorkouts, totalPages: newTotalPages } =
+        await getWorkoutData(supabase, 1); // Reset to page 1 after deletion
+
+      // Only set the workouts array, not the entire object
+      setWorkouts(updatedWorkouts);
 
       // Success toast
       toast.dismiss(toastId);
       toast.success(`${workoutName} deleted successfully`);
+
+      // If you have a way to update the parent's pagination state, do it here
+      // Example: onPaginationChange(1, newTotalPages);
     } catch (error) {
       console.error("Error deleting workout:", error);
       toast.error(`Failed to delete ${workoutName}`);
@@ -194,112 +231,215 @@ const Actions = ({
 };
 
 export default function WorkoutsPage() {
+  // State management
   const [workouts, setWorkouts] = useState<any[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize] = useState(6); // Number of workouts per page
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const supabase = createClient();
 
-  useEffect(() => {
-    const getData = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getWorkoutData(supabase);
-        setWorkouts(data);
-      } catch (error) {
-        console.error("Error fetching workouts:", error);
-        toast.error("Failed to load workouts");
-      } finally {
+  // Load workouts with pagination
+  const loadWorkouts = async (page = currentPage) => {
+    try {
+      if (!isInitialLoad) setIsLoading(true);
+
+      const { workouts: data, totalPages: pages } = await getWorkoutData(
+        supabase,
+        page,
+        pageSize
+      );
+
+      setWorkouts(data);
+      setTotalPages(pages);
+
+      // Short timeout to ensure smooth transitions
+      setTimeout(() => {
         setIsLoading(false);
-      }
-    };
-    getData();
+        setIsInitialLoad(false);
+      }, 100);
+    } catch (error) {
+      console.error("Error fetching workouts:", error);
+      toast.error("Failed to load workouts");
+      setIsLoading(false);
+      setIsInitialLoad(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    loadWorkouts(1);
   }, []);
 
+  // Handle page changes
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    loadWorkouts(page);
+
+    // Scroll to top of workout section smoothly
+    document.getElementById("workouts-container")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   return (
-    <div className="flex flex-col space-y-6 p-4">
+    <div className="flex flex-col space-y-6 p-4 animate-fadeIn">
       <ActiveSessionBanner />
 
       <PageTitle title="Workouts" />
 
-      <div className="flex justify-between items-center">
+      <div
+        className="flex flex-col sm:flex-row justify-between items-center gap-4"
+        id="workouts-container"
+      >
         <Button
           as={Link}
           href="/protected/workouts/create-workout"
           color="primary"
-          className="mb-4 dark:text-white"
+          className="dark:text-white w-full sm:w-auto"
           startContent={<Plus className="h-4 w-4" />}
         >
           Create Workout
         </Button>
-      </div>
 
-      {isLoading ? (
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="w-full p-4">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-6 w-40 rounded-lg" />
-                <Skeleton className="h-8 w-8 rounded-full" />
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : workouts && workouts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {workouts.map((workout) => (
-            <Card key={workout.id} className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="text-lg font-semibold">{workout.name}</h3>
-                  {workout.description && (
-                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                      {workout.description}
-                    </p>
-                  )}
-                </div>
-                <Actions
-                  id={workout.id}
-                  workoutName={workout.name}
-                  setWorkouts={setWorkouts}
-                />
-              </div>
-              <div className="flex items-center gap-2 mt-3">
-                <Chip
-                  size="sm"
-                  variant="flat"
-                  startContent={<Dumbbell className="h-3 w-3" />}
-                >
-                  {workout.workout_exercises[0]?.count || 0} exercises
-                </Chip>
-                {workout.created_at && (
-                  <Chip
-                    size="sm"
-                    variant="flat"
-                    color="secondary"
-                    startContent={<Calendar className="h-3 w-3" />}
-                  >
-                    {new Date(workout.created_at).toLocaleDateString()}
-                  </Chip>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-16 border rounded-lg">
-          <div className="flex flex-col items-center gap-3 text-gray-500">
-            <Dumbbell className="w-10 h-10" />
-            <p className="mb-4">No workouts found</p>
+        {/* Only show pagination when we have more than one page and not loading */}
+        {!isLoading && totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2">
             <Button
-              as={Link}
-              href="/protected/workouts/create-workout"
-              color="primary"
+              isIconOnly
               size="sm"
+              variant="flat"
+              isDisabled={currentPage === 1}
+              onPress={() => handlePageChange(currentPage - 1)}
             >
-              Create Your First Workout
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Pagination
+              total={totalPages}
+              initialPage={1}
+              page={currentPage}
+              onChange={handlePageChange}
+              size="sm"
+              className="hidden sm:flex"
+            />
+            <span className="text-sm flex sm:hidden">
+              {currentPage} / {totalPages}
+            </span>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="flat"
+              isDisabled={currentPage === totalPages}
+              onPress={() => handlePageChange(currentPage + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      <div className="transition-all duration-300 ease-in-out w-full">
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(pageSize)].map((_, i) => (
+              <Card key={i} className="w-full p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="space-y-2 w-full">
+                    <Skeleton className="h-6 w-3/4 rounded-lg" />
+                    <Skeleton className="h-4 w-full rounded-lg" />
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                </div>
+                <div className="flex items-center gap-2 mt-3">
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : workouts && workouts.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {workouts.map((workout) => (
+                <Card
+                  key={workout.id}
+                  className="p-4 hover:shadow-md transition-shadow duration-200"
+                  isPressable
+                  as={Link}
+                  href={`/protected/workouts/${workout.id}`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="text-lg font-semibold">{workout.name}</h3>
+                      {workout.description && (
+                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                          {workout.description}
+                        </p>
+                      )}
+                    </div>
+                    <div onClick={(e) => e.preventDefault()}>
+                      <Actions
+                        id={workout.id}
+                        workoutName={workout.name}
+                        setWorkouts={setWorkouts}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <Chip
+                      size="sm"
+                      variant="flat"
+                      startContent={<Dumbbell className="h-3 w-3" />}
+                    >
+                      {workout.workout_exercises[0]?.count || 0} exercises
+                    </Chip>
+                    {workout.created_at && (
+                      <Chip
+                        size="sm"
+                        variant="flat"
+                        color="secondary"
+                        startContent={<Calendar className="h-3 w-3" />}
+                      >
+                        {new Date(workout.created_at).toLocaleDateString()}
+                      </Chip>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {/* Bottom pagination for larger datasets */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mb-6">
+                <Pagination
+                  total={totalPages}
+                  initialPage={1}
+                  page={currentPage}
+                  onChange={handlePageChange}
+                  showControls
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-16 border rounded-lg transition-all duration-300 ease-in">
+            <div className="flex flex-col items-center gap-3 text-gray-500">
+              <Dumbbell className="w-10 h-10" />
+              <p className="mb-4">No workouts found</p>
+              <Button
+                as={Link}
+                href="/protected/workouts/create-workout"
+                color="primary"
+                size="sm"
+              >
+                Create Your First Workout
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
