@@ -59,12 +59,41 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     null
   );
 
-  // Load session from storage on mount
+  // Make sure we're properly loading from localStorage on mount
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
     if (savedSession) {
-      setActiveSession(JSON.parse(savedSession));
+      try {
+        setActiveSession(JSON.parse(savedSession));
+      } catch (e) {
+        console.error("Error parsing saved session:", e);
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
     }
+  }, []);
+
+  // Listen for storage events to handle changes from other tabs
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleStorage = () => {
+      const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (savedSession) {
+        try {
+          setActiveSession(JSON.parse(savedSession));
+        } catch (e) {
+          console.error("Error parsing saved session:", e);
+          setActiveSession(null);
+        }
+      } else {
+        setActiveSession(null);
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   const startSession = (session: {
@@ -121,17 +150,16 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     return Math.round(((currentTime - startTime) / (1000 * 60)) * 10) / 10;
   };
 
+  // Update the endSession function to be cleaner and more reliable
   const endSession = () => {
-    // Clear state
+    // Clear state first
     setActiveSession(null);
 
-    // Clear all related localStorage items
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-    localStorage.removeItem("workout-timer-state");
-    localStorage.removeItem("fitflow-active-session"); // Add this to ensure all variations are cleared
-
-    // Force a re-render by triggering a state change in the parent components
-    window.dispatchEvent(new Event("storage")); // This triggers storage event listeners
+    // Remove from localStorage in a clean way
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      localStorage.removeItem("workout-timer-state");
+    }
   };
 
   return (

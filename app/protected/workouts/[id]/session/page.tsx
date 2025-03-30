@@ -48,6 +48,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+const SESSION_STORAGE_KEY = "fitflow-active-session";
+
 // Fetch workout data
 const getWorkoutData = async (supabase: any, workoutId: string) => {
   const { data: workout, error } = await supabase
@@ -246,15 +248,21 @@ export default function WorkoutSession() {
   // Start session when page loads
   useEffect(() => {
     if (!activeSession && workout && user) {
-      setSessionStartTime(new Date().toISOString());
+      // Create the timestamp once and use it in both places
+      const timestamp = new Date().toISOString();
+
+      // Set state for display purposes
+      setSessionStartTime(timestamp);
+
+      // Use the same timestamp directly in the startSession call
       startSession({
         user_id: user.id,
         workout_id: workoutId,
         workout_name: workout.name,
-        started_at: sessionStartTime!,
+        started_at: timestamp, // Use direct value instead of state
       });
     }
-  }, [workout, user, activeSession]);
+  }, [workout, user, activeSession, workoutId, startSession]);
 
   // Fetch paginated exercises
   const fetchExercises = async (
@@ -604,12 +612,17 @@ export default function WorkoutSession() {
   };
 
   // Add this to your component
+  const hasUpdatedRef = useRef(false);
+
   useEffect(() => {
-    if (activeSession && sessionExercises.length > 0) {
-      // Update session with current progress
+    if (isLoading || hasUpdatedRef.current) return;
+
+    if (sessionExercises?.length > 0) {
       updateSessionProgress(sessionExercises);
+      // Mark as updated so we don't repeat unnecessarily
+      hasUpdatedRef.current = true;
     }
-  }, [sessionExercises]);
+  }, [sessionExercises, isLoading, updateSessionProgress]);
 
   // Add this function to your component
   const handleOpenModal = () => {
@@ -1376,7 +1389,7 @@ export default function WorkoutSession() {
                   type="submit"
                   className="w-full"
                   isLoading={completingWorkout}
-                  onClick={() => setCompletingWorkout(true)}
+                  onPress={() => setCompletingWorkout(true)}
                   startContent={
                     !completingWorkout && <Check className="h-5 w-5" />
                   }
@@ -1427,9 +1440,22 @@ export default function WorkoutSession() {
                 <Button
                   color="danger"
                   onPress={() => {
-                    toast.info("Workout cancelled");
-                    localStorage.removeItem(TIMER_STORAGE_KEY);
+                    // Create a loading toast and store its ID
+                    const loadingToastId = toast.loading(
+                      "Cancelling workout..."
+                    );
+
+                    // Call the endSession function from context
                     endSession();
+
+                    // Also clean up the timer
+                    localStorage.removeItem("workout-timer-state");
+
+                    // Dismiss the loading toast before showing the success toast
+                    toast.dismiss(loadingToastId);
+                    toast.success("Workout cancelled");
+
+                    // Navigate back to workouts page
                     router.push("/protected/workouts");
                     onClose();
                   }}
