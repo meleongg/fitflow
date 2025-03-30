@@ -27,8 +27,8 @@ import {
   useDisclosure,
 } from "@nextui-org/react";
 import {
+  BookOpenCheckIcon,
   ChevronDown,
-  Dumbbell,
   EditIcon,
   FilterIcon,
   LayersIcon,
@@ -60,52 +60,61 @@ export default function ExerciseLibraryPage() {
     description: "",
     category_id: "",
   });
-
-  // New state for mobile category dropdown
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selectedCategoryName, setSelectedCategoryName] =
     useState("All Exercises");
+  const [isSaving, setIsSaving] = useState(false);
+  const [searchPerformed, setSearchPerformed] = useState(false);
 
   // Fetch exercises and categories
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        setIsLoading(true);
+      toast.promise(
+        (async () => {
+          setIsLoading(true);
+          try {
+            // Get user info
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
 
-        // Get user info
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+            if (!user) {
+              throw new Error("Not authenticated");
+            }
 
-        if (!user) {
-          throw new Error("Not authenticated");
+            // Get categories
+            const { data: categoriesData, error: categoriesError } =
+              await supabase.from("categories").select("*").order("name");
+
+            if (categoriesError) throw categoriesError;
+
+            // Get exercises (both default and user's custom ones)
+            const { data: exercisesData, error: exercisesError } =
+              await supabase
+                .from("exercises")
+                .select("*, category:categories(*)")
+                .or(`is_default.eq.true,user_id.eq.${user.id}`)
+                .order("name");
+
+            if (exercisesError) throw exercisesError;
+
+            // Set data with a slight delay to show loading states
+            setCategories(categoriesData || []);
+            setExercises(exercisesData || []);
+
+            return exercisesData?.length || 0;
+          } catch (error) {
+            console.error("Error fetching data:", error);
+            throw error;
+          } finally {
+            setIsLoading(false);
+          }
+        })(),
+        {
+          loading: "Loading your exercise library...",
+          success: (count) => `Loaded ${count} exercises`,
+          error: "Failed to load exercises",
         }
-
-        // Get categories
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from("categories")
-          .select("*")
-          .order("name");
-
-        if (categoriesError) throw categoriesError;
-
-        // Get exercises (both default and user's custom ones)
-        const { data: exercisesData, error: exercisesError } = await supabase
-          .from("exercises")
-          .select("*, category:categories(*)")
-          .or(`is_default.eq.true,user_id.eq.${user.id}`)
-          .order("name");
-
-        if (exercisesError) throw exercisesError;
-
-        setCategories(categoriesData || []);
-        setExercises(exercisesData || []);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Failed to load exercises");
-      } finally {
-        setIsLoading(false);
-      }
+      );
     };
 
     fetchData();
@@ -141,16 +150,13 @@ export default function ExerciseLibraryPage() {
         return;
       }
 
-      const toastId = toast.loading(
-        editExercise ? "Updating exercise..." : "Creating exercise..."
-      );
+      setIsSaving(true);
 
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
-        toast.dismiss(toastId);
         toast.error("Not authenticated");
         throw new Error("Not authenticated");
       }
@@ -167,10 +173,11 @@ export default function ExerciseLibraryPage() {
           .eq("id", editExercise.id);
 
         if (error) {
-          toast.dismiss(toastId);
           toast.error("Failed to update exercise");
           throw error;
         }
+
+        toast.success("Exercise updated successfully");
       } else {
         // Add new exercise
         const { error } = await supabase.from("exercises").insert({
@@ -182,10 +189,11 @@ export default function ExerciseLibraryPage() {
         });
 
         if (error) {
-          toast.dismiss(toastId);
           toast.error("Failed to create exercise");
           throw error;
         }
+
+        toast.success("Exercise added successfully");
       }
 
       // Refresh exercises
@@ -198,15 +206,11 @@ export default function ExerciseLibraryPage() {
       if (error) throw error;
 
       setExercises(data || []);
-      toast.dismiss(toastId);
-      toast.success(
-        editExercise
-          ? "Exercise updated successfully"
-          : "Exercise added successfully"
-      );
       onClose();
     } catch (error) {
       console.error("Error saving exercise:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -233,8 +237,26 @@ export default function ExerciseLibraryPage() {
     }
   });
 
+  // Track when search is performed
+  useEffect(() => {
+    if (searchTerm) {
+      setSearchPerformed(true);
+      // Only show toast for non-empty searches with results
+      if (filteredExercises.length > 0 && searchTerm.length > 2) {
+        toast(`Found ${filteredExercises.length} matching exercises`, {
+          icon: <SearchIcon size={16} />,
+        });
+      }
+    } else {
+      setSearchPerformed(false);
+    }
+  }, [searchTerm]);
+
   // Select a category (for both tabs and dropdown)
   const selectCategory = (key: string) => {
+    // Don't reload if selecting the same category
+    if (key === activeTab) return;
+
     setActiveTab(key);
 
     // Update the dropdown text for mobile view
@@ -248,11 +270,12 @@ export default function ExerciseLibraryPage() {
       const category = categories.find((c) => String(c.id) === key);
       if (category) {
         setSelectedCategoryName(category.name);
+        // Show toast for specific category selection
+        toast(`Showing ${category.name} exercises`, {
+          icon: <FilterIcon size={16} />,
+        });
       }
     }
-
-    // Hide mobile filters after selection
-    setShowMobileFilters(false);
   };
 
   // Group exercises by category for better organization
@@ -282,176 +305,223 @@ export default function ExerciseLibraryPage() {
 
   return (
     <div className="p-4 space-y-6 animate-fadeIn">
-      <PageTitle title="Exercise Library" />
+      <PageTitle title="Exercise Library" className="mb-6" />
 
       {/* Enhanced search and filter bar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="w-full md:w-1/2 relative">
-          <Input
-            placeholder="Search exercises..."
-            startContent={
-              <SearchIcon
-                className="text-default-400 flex-shrink-0"
-                size={18}
-              />
-            }
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            variant="bordered"
-            classNames={{
-              base: "max-w-full",
-              inputWrapper: "h-10",
-            }}
-            endContent={
-              searchTerm && (
-                <Button
-                  isIconOnly
-                  variant="light"
-                  size="sm"
-                  onPress={clearSearch}
-                >
-                  <XIcon size={14} />
-                </Button>
-              )
-            }
-          />
-          {searchTerm && (
-            <div className="text-xs text-gray-500 mt-1">
-              {filteredExercises.length}{" "}
-              {filteredExercises.length === 1 ? "result" : "results"}
-            </div>
-          )}
-        </div>
+        {isLoading ? (
+          <Skeleton className="h-10 w-full md:w-1/2 rounded-lg" />
+        ) : (
+          <div className="w-full md:w-1/2 relative">
+            <Input
+              placeholder="Search exercises..."
+              startContent={
+                <SearchIcon
+                  className="text-default-400 flex-shrink-0"
+                  size={18}
+                />
+              }
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              variant="bordered"
+              classNames={{
+                base: "max-w-full",
+                inputWrapper: "h-10",
+              }}
+              endContent={
+                searchTerm && (
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    size="sm"
+                    onPress={clearSearch}
+                  >
+                    <XIcon size={14} />
+                  </Button>
+                )
+              }
+            />
+            {searchPerformed && (
+              <div className="text-xs text-gray-500 mt-1.5">
+                {filteredExercises.length}{" "}
+                {filteredExercises.length === 1 ? "result" : "results"} found
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           {/* Mobile filter dropdown */}
-          <Dropdown className="block md:hidden">
-            <DropdownTrigger>
-              <Button
-                variant="flat"
-                startContent={<FilterIcon size={16} />}
-                endContent={<ChevronDown size={16} />}
-                className="w-full sm:w-auto"
-              >
-                {selectedCategoryName}
-              </Button>
-            </DropdownTrigger>
-            <DropdownMenu
-              aria-label="Exercise Categories"
-              onAction={(key) => selectCategory(key as string)}
-              selectionMode="single"
-              selectedKeys={[activeTab]}
-              // Add disabledKeys prop instead of using isDisabled on items
-              disabledKeys={["category-header"]}
-              items={[
-                { key: "all", label: "All Exercises" },
-                { key: "custom", label: "My Exercises" },
-                { key: "default", label: "Default Exercises" },
-                {
-                  key: "category-header",
-                  label: "Categories",
-                  // Remove isDisabled property
-                  className: "text-gray-400",
-                },
-                ...categories.map((category) => ({
-                  key: String(category.id),
-                  label: category.name,
-                  textValue: category.name,
-                })),
-              ]}
-            >
-              {(item: DropdownItemType) => (
-                <DropdownItem
-                  key={item.key}
-                  className={item.className || ""}
-                  // Remove isDisabled prop here
-                  textValue={item.textValue || item.label}
+          {isLoading ? (
+            <Skeleton className="h-10 w-full sm:w-40 rounded-lg" />
+          ) : (
+            <Dropdown className="block md:hidden">
+              <DropdownTrigger>
+                <Button
+                  variant="flat"
+                  startContent={<FilterIcon size={16} />}
+                  endContent={<ChevronDown size={16} />}
+                  className="w-full sm:w-auto"
                 >
-                  {item.label}
-                </DropdownItem>
-              )}
-            </DropdownMenu>
-          </Dropdown>
+                  {selectedCategoryName}
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                aria-label="Exercise Categories"
+                onAction={(key) => selectCategory(key as string)}
+                selectionMode="single"
+                selectedKeys={[activeTab]}
+                disabledKeys={["category-header"]}
+                items={[
+                  { key: "all", label: "All Exercises" },
+                  { key: "custom", label: "My Exercises" },
+                  { key: "default", label: "Default Exercises" },
+                  {
+                    key: "category-header",
+                    label: "Categories",
+                    className: "text-gray-400",
+                  },
+                  ...categories.map((category) => ({
+                    key: String(category.id),
+                    label: category.name,
+                    textValue: category.name,
+                  })),
+                ]}
+              >
+                {(item: DropdownItemType) => (
+                  <DropdownItem
+                    key={item.key}
+                    className={item.className || ""}
+                    textValue={item.textValue || item.label}
+                  >
+                    {item.label}
+                  </DropdownItem>
+                )}
+              </DropdownMenu>
+            </Dropdown>
+          )}
 
-          <Button
-            color="primary"
-            startContent={<PlusIcon size={18} />}
-            onPress={handleAddExercise}
-            className="w-full sm:w-auto"
-          >
-            Add Custom Exercise
-          </Button>
+          {isLoading ? (
+            <Skeleton className="h-10 w-full sm:w-48 rounded-lg" />
+          ) : (
+            <Button
+              color="primary"
+              startContent={<PlusIcon size={18} />}
+              onPress={handleAddExercise}
+              className="w-full sm:w-auto"
+            >
+              Add Custom Exercise
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Category Tabs - Hidden on mobile */}
       <div className="hidden md:block">
-        <Tabs
-          selectedKey={activeTab}
-          onSelectionChange={(key) => selectCategory(key as string)}
-          color="primary"
-          variant="underlined"
-          classNames={{
-            tabList: "gap-2 w-full relative",
-            tab: "max-w-fit px-4 h-10",
-            cursor: "w-full",
-            panel: "pt-3",
-          }}
-          aria-label="Exercise Categories"
-        >
-          <Tab key="all" title="All Exercises" />
-          <Tab key="custom" title="My Exercises" />
-          <Tab key="default" title="Default Exercises" />
-
-          {/* Fix type error by mapping each category to a properly typed Tab */}
-          {categories.map((category) => (
-            <Tab key={String(category.id)} title={category.name.toString()} />
-          ))}
-        </Tabs>
+        {isLoading ? (
+          <div className="border-b border-default-200">
+            <div className="flex gap-4 pb-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-32 rounded-lg" />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Tabs
+            selectedKey={activeTab}
+            onSelectionChange={(key) => selectCategory(key as string)}
+            color="primary"
+            variant="underlined"
+            classNames={{
+              tabList: "gap-2 w-full relative",
+              tab: "max-w-fit px-4 h-10",
+              cursor: "w-full",
+              panel: "pt-3",
+            }}
+            aria-label="Exercise Categories"
+          >
+            <Tab key="all" title="All Exercises" />
+            <Tab key="custom" title="My Exercises" />
+            <Tab key="default" title="Default Exercises" />
+            {categories.map((category) => (
+              <Tab key={String(category.id)} title={category.name.toString()} />
+            ))}
+          </Tabs>
+        )}
       </div>
 
       {/* Exercise Library Content */}
       <div className="transition-all duration-300 ease-in-out">
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, index) => (
-              <Card key={index} className="overflow-hidden">
-                <CardBody className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="w-2/3">
-                      <Skeleton className="h-5 w-4/5 rounded-lg mb-2" />
-                      <Skeleton className="h-4 w-1/2 rounded-lg" />
-                    </div>
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                  </div>
-                  <div className="mt-4">
-                    <Skeleton className="h-4 w-full rounded-lg mb-2" />
-                    <Skeleton className="h-4 w-4/5 rounded-lg" />
-                  </div>
-                </CardBody>
-              </Card>
+          // Enhanced loading skeleton with category headers
+          <div className="space-y-12">
+            {[...Array(2)].map((_, categoryIndex) => (
+              <div key={categoryIndex}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Skeleton className="h-6 w-32 rounded-lg" />
+                  <Skeleton className="h-4 w-8 rounded-lg" />
+                  <div className="h-[1px] bg-gray-200 dark:bg-gray-700 flex-grow"></div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...Array(3)].map((_, index) => (
+                    <Card key={index} className="overflow-hidden">
+                      <CardBody className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="w-2/3">
+                            <Skeleton className="h-5 w-4/5 rounded-lg mb-2" />
+                            <Skeleton className="h-4 w-1/2 rounded-lg" />
+                          </div>
+                          <Skeleton className="h-8 w-8 rounded-full" />
+                        </div>
+                        <div className="mt-4">
+                          <Skeleton className="h-4 w-full rounded-lg mb-2" />
+                          <Skeleton className="h-4 w-4/5 rounded-lg" />
+                        </div>
+                      </CardBody>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         ) : filteredExercises.length === 0 ? (
+          // Enhanced empty state
           <div className="text-center p-12 border rounded-xl bg-gray-50 dark:bg-gray-800/50">
             <div className="inline-flex justify-center mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-full">
-              <Dumbbell size={28} className="text-gray-500" />
+              {searchTerm ? (
+                <SearchIcon size={28} className="text-gray-500" />
+              ) : (
+                <BookOpenCheckIcon size={28} className="text-gray-500" />
+              )}
             </div>
-            <p className="text-lg font-medium mb-2">No exercises found</p>
-            <p className="text-gray-500 mb-4">
-              Try adjusting your search or filters
+            <p className="text-xl font-medium mb-2">
+              {searchTerm ? "No matching exercises" : "No exercises found"}
+            </p>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              {searchTerm
+                ? `We couldn't find any exercises matching "${searchTerm}"`
+                : "Your exercise library appears to be empty"}
             </p>
 
-            {searchTerm && (
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {searchTerm && (
+                <Button
+                  variant="flat"
+                  color="default"
+                  onPress={clearSearch}
+                  startContent={<XIcon size={16} />}
+                >
+                  Clear Search
+                </Button>
+              )}
               <Button
-                variant="flat"
-                color="default"
-                onPress={clearSearch}
-                startContent={<XIcon size={16} />}
+                color="primary"
+                onPress={handleAddExercise}
+                startContent={<PlusIcon size={16} />}
               >
-                Clear Search
+                Add Custom Exercise
               </Button>
-            )}
+            </div>
           </div>
         ) : (
           <div className="space-y-8">
@@ -459,11 +529,14 @@ export default function ExerciseLibraryPage() {
             {activeTab !== "all" &&
             activeTab !== "custom" &&
             activeTab !== "default" ? (
-              <div>
+              <div className="animate-fadeIn">
                 <div className="flex items-center gap-2 mb-4">
                   <LayersIcon size={18} className="text-primary" />
                   <span className="text-sm text-gray-500">
-                    {filteredExercises.length} exercises
+                    {filteredExercises.length}
+                    {filteredExercises.length === 1
+                      ? " exercise"
+                      : " exercises"}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -477,10 +550,14 @@ export default function ExerciseLibraryPage() {
                 </div>
               </div>
             ) : (
-              // Grouped By Category
-              sortedCategories.map((category: any) => (
-                <div key={category.name} className="space-y-3 animate-fadeIn">
-                  <div className="flex items-center gap-2 sticky top-0 bg-background z-10 py-2">
+              // Grouped By Category with improved animation
+              sortedCategories.map((category: any, index) => (
+                <div
+                  key={category.name}
+                  className="space-y-3 animate-fadeIn"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex items-center gap-2 sticky top-0 bg-background/90 backdrop-blur-md z-10 py-2">
                     <h2 className="text-lg font-semibold">{category.name}</h2>
                     <span className="text-sm text-gray-500">
                       ({category.exercises.length})
@@ -489,13 +566,16 @@ export default function ExerciseLibraryPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {category.exercises.map((exercise: any) => (
-                      <ExerciseCard
-                        key={exercise.id}
-                        exercise={exercise}
-                        onEdit={handleEditExercise}
-                      />
-                    ))}
+                    {category.exercises.map(
+                      (exercise: any, exIndex: number) => (
+                        <ExerciseCard
+                          key={exercise.id}
+                          exercise={exercise}
+                          onEdit={handleEditExercise}
+                          animationDelay={exIndex * 30}
+                        />
+                      )
+                    )}
                   </div>
                 </div>
               ))
@@ -507,7 +587,9 @@ export default function ExerciseLibraryPage() {
       {/* Add/Edit Exercise Modal */}
       <Modal
         isOpen={isOpen}
-        onClose={onClose}
+        onClose={() => {
+          if (!isSaving) onClose();
+        }}
         placement="center"
         scrollBehavior="inside"
       >
@@ -538,6 +620,7 @@ export default function ExerciseLibraryPage() {
                     }}
                     variant="bordered"
                     isRequired
+                    isDisabled={isSaving}
                   />
 
                   <Select
@@ -564,6 +647,7 @@ export default function ExerciseLibraryPage() {
                       }
                     }}
                     variant="bordered"
+                    isDisabled={isSaving}
                   >
                     {categories.map((category) => (
                       <SelectItem key={String(category.id)} value={category.id}>
@@ -595,21 +679,49 @@ export default function ExerciseLibraryPage() {
                     }}
                     variant="bordered"
                     minRows={3}
+                    isDisabled={isSaving}
                   />
                 </div>
               </ModalBody>
               <ModalFooter>
-                <Button color="danger" variant="flat" onPress={onClose}>
+                <Button
+                  color="danger"
+                  variant="flat"
+                  onPress={onClose}
+                  isDisabled={isSaving}
+                >
                   Cancel
                 </Button>
-                <Button color="primary" onPress={saveExercise}>
-                  Save Exercise
+                <Button
+                  color="primary"
+                  onPress={saveExercise}
+                  isLoading={isSaving}
+                  startContent={!isSaving && <PlusIcon size={16} />}
+                >
+                  {editExercise ? "Update" : "Save"} Exercise
                 </Button>
               </ModalFooter>
             </>
           )}
         </ModalContent>
       </Modal>
+
+      {/* Add global styles for animations */}
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }
@@ -618,15 +730,18 @@ export default function ExerciseLibraryPage() {
 function ExerciseCard({
   exercise,
   onEdit,
+  animationDelay = 0,
 }: {
   exercise: any;
   onEdit: (exercise: any) => void;
+  animationDelay?: number;
 }) {
   return (
     <Card
-      className="hover:shadow-md transition-all duration-200 border border-transparent hover:border-primary/20"
+      className="hover:shadow-md transition-all duration-200 border border-transparent hover:border-primary/20 animate-fadeIn"
       isPressable={!exercise.is_default}
       onPress={() => !exercise.is_default && onEdit(exercise)}
+      style={{ animationDelay: `${animationDelay}ms` }}
     >
       <CardBody className="p-4 gap-2">
         <div className="flex justify-between items-start">
@@ -648,20 +763,16 @@ function ExerciseCard({
                 </Tooltip>
               ) : (
                 <Tooltip content="Edit exercise">
-                  {/* Fixed button with separate onClick handler */}
-                  <span onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      variant="light"
-                      className="text-default-400 hover:text-primary"
-                      onPress={() => {
-                        onEdit(exercise);
-                      }}
-                    >
-                      <EditIcon size={16} />
-                    </Button>
-                  </span>
+                  {/* Wrap with a div instead of span and use stopPropagation */}
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(exercise);
+                    }}
+                    className="flex items-center justify-center h-8 w-8 rounded-full cursor-pointer text-default-400 hover:text-primary hover:bg-default-100"
+                  >
+                    <EditIcon size={16} />
+                  </div>
                 </Tooltip>
               )}
             </div>
@@ -675,7 +786,7 @@ function ExerciseCard({
         </div>
 
         {exercise.description && (
-          <p className="text-small text-default-500 mt-1 line-clamp-3">
+          <p className="text-small text-default-500 mt-2 line-clamp-3">
             {exercise.description}
           </p>
         )}
