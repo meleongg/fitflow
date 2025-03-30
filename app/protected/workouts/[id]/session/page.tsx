@@ -201,6 +201,7 @@ export default function WorkoutSession() {
     setIndex: number;
   } | null>(null);
   const [completingWorkout, setCompletingWorkout] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Add to your component
   const scrollHeaderRef = useRef<HTMLDivElement>(null);
@@ -806,6 +807,7 @@ export default function WorkoutSession() {
       </div>
 
       <Form
+        ref={formRef}
         className="w-full max-w-full justify-center items-center space-y-4"
         validationBehavior="native"
         onReset={() => setSubmitted(null)}
@@ -1390,7 +1392,13 @@ export default function WorkoutSession() {
                   type="submit"
                   className="w-full"
                   isLoading={completingWorkout}
-                  onPress={() => setCompletingWorkout(true)}
+                  onPress={() => {
+                    setCompletingWorkout(true);
+                    // Use the ref to access the form
+                    if (formRef.current) {
+                      formRef.current.requestSubmit();
+                    }
+                  }}
                   startContent={
                     !completingWorkout && <Check className="h-5 w-5" />
                   }
