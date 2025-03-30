@@ -28,6 +28,7 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
+  Textarea,
   useDisclosure,
 } from "@nextui-org/react";
 import { ArrowDown, ArrowUp, Dumbbell, Trash2 } from "lucide-react";
@@ -1041,73 +1042,115 @@ const CreateWorkoutPage = () => {
                 wrapper: "items-center justify-center p-2",
               }}
             >
-              <ModalContent className="max-w-[95vw] sm:max-w-md">
+              <ModalContent className="max-w-md mx-auto">
                 {(onCustomClose) => (
                   <>
-                    <ModalHeader>
+                    <ModalHeader className="flex flex-col gap-1">
                       <h3 className="text-lg font-bold">Add Custom Exercise</h3>
                     </ModalHeader>
+
                     <ModalBody>
-                      <div className="bg-yellow-100 text-yellow-700 p-2 rounded mb-4">
+                      {/* Note section with improved styling */}
+                      <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 p-3 rounded-lg mb-4 text-sm">
                         <strong>NOTE:</strong> Creating a custom exercise here
                         will add it to your Exercise Library.
                       </div>
 
                       <form
-                        onSubmit={handleCustomExerciseSubmit}
-                        className="space-y-4"
+                        id="custom-exercise-form"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCustomExerciseSubmit(e);
+                        }}
+                        className="flex flex-col gap-5"
                       >
                         <Input
                           isRequired
                           label="Exercise Name"
                           name="exerciseName"
                           placeholder="Enter exercise name"
+                          variant="bordered"
+                          labelPlacement="outside"
                           isInvalid={!!customExerciseError}
                           errorMessage={customExerciseError}
                           onChange={() =>
                             customExerciseError && setCustomExerciseError(null)
-                          } // Clear error when user types
+                          }
+                          classNames={{
+                            label:
+                              "text-sm font-medium text-default-700 mb-1.5",
+                            inputWrapper: "shadow-sm",
+                          }}
                         />
 
-                        {/* Dropdown for categories */}
                         <Select
                           isRequired
                           label="Category"
                           placeholder="Select a category"
-                          value={selectedCategory}
+                          selectedKeys={
+                            selectedCategory ? [String(selectedCategory)] : []
+                          }
                           onChange={(e) =>
                             setSelectedCategory(Number(e.target.value))
                           }
                           name="exerciseCategory"
+                          variant="bordered"
+                          labelPlacement="outside"
+                          classNames={{
+                            label:
+                              "text-sm font-medium text-default-700 mb-1.5",
+                            trigger: "shadow-sm",
+                            popoverContent: "shadow-lg",
+                          }}
                         >
-                          <>
-                            {categories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </>
+                          {categories.map((category) => (
+                            <SelectItem
+                              key={String(category.id)}
+                              value={category.id}
+                            >
+                              {category.name}
+                            </SelectItem>
+                          ))}
                         </Select>
 
-                        <Input
+                        {/* Replace Input with Textarea for description */}
+                        <Textarea
                           label="Description"
                           name="exerciseDescription"
-                          placeholder="Optional description"
-                          type="text"
+                          placeholder="Describe the exercise (optional)"
+                          variant="bordered"
+                          labelPlacement="outside"
+                          minRows={3}
+                          classNames={{
+                            label:
+                              "text-sm font-medium text-default-700 mb-1.5",
+                            inputWrapper: "shadow-sm",
+                          }}
                         />
-
-                        <Button
-                          type="submit"
-                          color="primary"
-                          className="w-full"
-                        >
-                          Add Exercise
-                        </Button>
                       </form>
                     </ModalBody>
-                    <ModalFooter>
-                      <Button color="secondary" onPress={onCustomClose}>
-                        Close
+
+                    <ModalFooter className="pt-5 border-t border-default-200">
+                      <Button
+                        color="danger"
+                        variant="flat"
+                        onPress={onCustomClose}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        color="primary"
+                        onPress={() => {
+                          const form = document.getElementById(
+                            "custom-exercise-form"
+                          ) as HTMLFormElement;
+                          if (form) {
+                            form.requestSubmit();
+                          }
+                        }}
+                      >
+                        Add Exercise
                       </Button>
                     </ModalFooter>
                   </>
