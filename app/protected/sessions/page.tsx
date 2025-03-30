@@ -4,9 +4,27 @@ import PageTitle from "@/components/ui/page-title";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { createClient } from "@/utils/supabase/client";
 import { kgToLbs } from "@/utils/units";
-import { Button, Card, Chip, Pagination, Skeleton } from "@nextui-org/react";
+import {
+  Button,
+  Card,
+  CardBody,
+  Chip,
+  Divider,
+  Pagination,
+  Skeleton,
+} from "@nextui-org/react";
+import {
+  Award,
+  BarChart3,
+  Calendar,
+  ChevronRight,
+  Clock,
+  Dumbbell,
+  Flame,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 // Helper functions for stats calculations
 const calculateStreakDays = (sessions: any[]) => {
@@ -91,69 +109,96 @@ export default function SessionsPage() {
 
   const supabase = createClient();
 
-  // Fetch sessions with workout and exercise details
+  // Fetch sessions with improved toast notifications
   useEffect(() => {
     const fetchSessions = async () => {
-      try {
-        setIsLoading(true);
+      // Sonner's promise-based toast for async operations
+      toast.promise(
+        (async () => {
+          setIsLoading(true);
+          try {
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
 
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+            if (!user) {
+              setError("Not authenticated");
+              throw new Error(
+                "Authentication required to view workout history"
+              );
+            }
 
-        if (!user) {
-          setError("Not authenticated");
-          return;
-        }
+            const { data, error } = await supabase
+              .from("sessions")
+              .select(
+                `
+                *,
+                workout:workouts(*),
+                session_exercises(*)
+              `
+              )
+              .eq("user_id", user.id)
+              .order("started_at", { ascending: false });
 
-        const { data, error } = await supabase
-          .from("sessions")
-          .select(
-            `
-            *,
-            workout:workouts(*),
-            session_exercises(*)
-          `
-          )
-          .eq("user_id", user.id)
-          .order("started_at", { ascending: false });
+            if (error) throw error;
 
-        if (error) throw error;
+            // Create a safe result that's guaranteed to be an array
+            const safeData = data || [];
 
-        if (data) {
-          setSessions(data);
+            if (safeData.length) {
+              setSessions(safeData);
 
-          // Extract unique months from sessions
-          const allMonths = data.map((s) =>
-            getMonthName(new Date(s.started_at))
-          );
-          const uniqueMonths = Array.from(new Set(allMonths));
-          setMonths(uniqueMonths);
+              // Extract unique months from sessions
+              const allMonths = safeData.map((s) =>
+                getMonthName(new Date(s.started_at))
+              );
+              const uniqueMonths = Array.from(new Set(allMonths));
+              setMonths(uniqueMonths);
 
-          // Set default selected month to most recent
-          if (uniqueMonths.length > 0) {
-            setSelectedMonth(uniqueMonths[0]);
+              // Set default selected month to most recent
+              if (uniqueMonths.length > 0) {
+                setSelectedMonth(uniqueMonths[0]);
+              }
+            } else {
+              setSessions([]);
+              setMonths([]);
+            }
+
+            return safeData; // Return safe array for success message
+          } catch (err: any) {
+            console.error("Error fetching sessions:", err);
+            setError(err.message);
+            throw err; // Re-throw for error toast
+          } finally {
+            setIsLoading(false);
           }
+        })(),
+        {
+          loading: "Loading your workout history...",
+          success: (data) => `Loaded ${data.length} workout sessions`,
+          error: "Could not load your workout history",
         }
-      } catch (err: any) {
-        console.error("Error fetching sessions:", err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
+      );
     };
 
     fetchSessions();
   }, []);
 
-  // Filter sessions whenever selectedMonth changes
+  // Filter sessions when selectedMonth changes with toast notification
   useEffect(() => {
-    if (selectedMonth) {
+    if (selectedMonth && sessions.length) {
       const filtered = sessions.filter((session) => {
         const sessionMonth = getMonthName(new Date(session.started_at));
         return sessionMonth === selectedMonth;
       });
       setFilteredSessions(filtered);
+
+      if (filtered.length > 0) {
+        toast(`Viewing ${filtered.length} sessions from ${selectedMonth}`, {
+          description: "Filtered view",
+          icon: <Calendar className="h-4 w-4" />,
+        });
+      }
     } else {
       setFilteredSessions(sessions);
     }
@@ -227,156 +272,243 @@ export default function SessionsPage() {
     return (
       <div className="p-4">
         <PageTitle title="Session History" />
-        <div className="bg-red-100 p-4 rounded-lg">
-          <p className="text-red-700">{error}</p>
+        <div className="bg-red-100 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+          <p className="text-red-700 dark:text-red-300">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="max-w-full overflow-hidden px-4">
       <PageTitle title="Workout History" />
 
-      {/* Stats Summary */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-lg font-bold mb-4">Workout Summary</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      {/* Stats Summary Cards with Enhanced UI */}
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
+        {isLoading ? (
+          // Enhanced loading skeletons
+          Array(4)
+            .fill(0)
+            .map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
+        ) : (
+          <>
+            <Card className="bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20">
+              <CardBody className="p-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-blue-600 dark:text-blue-300">
+                      Total Sessions
+                    </p>
+                    <h3 className="text-3xl font-bold mt-1">
+                      {sessions.length}
+                    </h3>
+                  </div>
+                  <div className="bg-blue-500/10 p-2 rounded-lg">
+                    <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20">
+              <CardBody className="p-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-green-600 dark:text-green-300">
+                      Day Streak
+                    </p>
+                    <h3 className="text-3xl font-bold mt-1">
+                      {calculateStreakDays(sessions)}
+                    </h3>
+                  </div>
+                  <div className="bg-green-500/10 p-2 rounded-lg">
+                    <Flame className="h-5 w-5 text-green-600 dark:text-green-300" />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/30 dark:to-purple-800/20">
+              <CardBody className="p-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-purple-600 dark:text-purple-300">
+                      Sets Completed
+                    </p>
+                    <h3 className="text-3xl font-bold mt-1">
+                      {calculateTotalSets(sessions)}
+                    </h3>
+                  </div>
+                  <div className="bg-purple-500/10 p-2 rounded-lg">
+                    <Award className="h-5 w-5 text-purple-600 dark:text-purple-300" />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-800/20">
+              <CardBody className="p-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-amber-600 dark:text-amber-300">
+                      Total Volume
+                    </p>
+                    <h3 className="text-3xl font-bold mt-1">
+                      {displayTotalWeight(calculateTotalWeight(sessions))}
+                      <span className="text-sm ml-1 font-normal">
+                        {useMetric ? "kg" : "lbs"}
+                      </span>
+                    </h3>
+                  </div>
+                  <div className="bg-amber-500/10 p-2 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-amber-600 dark:text-amber-300" />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </>
+        )}
+      </div>
+
+      {/* Month Filter with improved scroll behavior */}
+      <div className="relative mb-6">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
           {isLoading ? (
-            <>
-              <Skeleton className="h-20 rounded-lg" />
-              <Skeleton className="h-20 rounded-lg" />
-              <Skeleton className="h-20 rounded-lg" />
-              <Skeleton className="h-20 rounded-lg" />
-            </>
+            <div className="flex gap-2">
+              {Array(4)
+                .fill(0)
+                .map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-28 rounded-lg" />
+                ))}
+            </div>
           ) : (
-            <>
-              <div className="p-3 bg-creamyBeige rounded-lg">
-                <div className="text-3xl font-bold">{sessions.length}</div>
-                <div className="text-sm">Total Sessions</div>
-              </div>
-              <div className="p-3 bg-creamyBeige rounded-lg">
-                <div className="text-3xl font-bold">
-                  {calculateStreakDays(sessions)}
-                </div>
-                <div className="text-sm">Day Streak</div>
-              </div>
-              <div className="p-3 bg-creamyBeige rounded-lg">
-                <div className="text-3xl font-bold">
-                  {calculateTotalSets(sessions)}
-                </div>
-                <div className="text-sm">Sets Completed</div>
-              </div>
-              <div className="p-3 bg-creamyBeige rounded-lg">
-                <div className="text-3xl font-bold">
-                  {displayTotalWeight(calculateTotalWeight(sessions))}
-                </div>
-                <div className="text-sm">
-                  Total Volume ({useMetric ? "kg" : "lbs"})
-                </div>
-              </div>
-            </>
+            months.map((month) => (
+              <Button
+                key={month}
+                size="sm"
+                radius="lg"
+                variant={selectedMonth === month ? "solid" : "flat"}
+                color={selectedMonth === month ? "primary" : "default"}
+                onPress={() => setSelectedMonth(month)}
+                className="min-w-[7rem] px-4"
+              >
+                {month}
+              </Button>
+            ))
           )}
         </div>
       </div>
 
-      {/* Month Filter */}
-      <div className="flex gap-2 overflow-x-auto py-2">
+      {/* Session Timeline with enhanced cards */}
+      <div className="space-y-8 mb-16">
         {isLoading ? (
-          <div className="flex gap-2">
-            <Skeleton className="h-8 w-24 rounded-lg" />
-            <Skeleton className="h-8 w-24 rounded-lg" />
-            <Skeleton className="h-8 w-24 rounded-lg" />
-          </div>
-        ) : (
-          months.map((month) => (
-            <Button
-              key={month}
-              size="sm"
-              variant={selectedMonth === month ? "solid" : "flat"}
-              onPress={() => setSelectedMonth(month)}
-            >
-              {month}
-            </Button>
-          ))
-        )}
-      </div>
-
-      {/* Session Timeline */}
-      <div className="space-y-8">
-        {isLoading ? (
+          // Enhanced loading state
           <>
-            <Skeleton className="h-40 rounded-lg" />
-            <Skeleton className="h-40 rounded-lg" />
+            {Array(3)
+              .fill(0)
+              .map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="h-6 w-32 rounded" />
+                  <Skeleton className="h-[120px] rounded-xl" />
+                </div>
+              ))}
           </>
         ) : Object.keys(paginatedSessionsByDate).length === 0 ? (
-          <div className="text-center p-12 bg-gray-50 rounded-lg">
-            <p className="text-xl font-semibold text-gray-500">
-              No sessions found for this month
-            </p>
-            <p className="text-gray-400 mt-2">
-              Try selecting a different month or start a new workout
-            </p>
-          </div>
+          // Enhanced empty state
+          <Card className="py-12 px-6">
+            <CardBody className="items-center justify-center text-center">
+              <div className="bg-default-100 rounded-full p-6 mb-4">
+                <Calendar
+                  className="h-12 w-12 text-default-400"
+                  strokeWidth={1.5}
+                />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No sessions found</h3>
+              <p className="text-default-500 max-w-md mx-auto mb-6">
+                {selectedMonth
+                  ? `You don't have any workout sessions recorded for ${selectedMonth}.`
+                  : "You haven't recorded any workout sessions yet."}
+              </p>
+              <Button
+                as={Link}
+                href="/protected/workouts"
+                color="primary"
+                variant="flat"
+                size="lg"
+              >
+                Start a New Workout
+              </Button>
+            </CardBody>
+          </Card>
         ) : (
           <>
             {Object.entries(paginatedSessionsByDate).map(
               ([date, dateSessions]) => (
-                <div key={date}>
-                  <h3 className="text-md font-medium text-gray-500 mb-3">
-                    {formatDate(date)}
-                  </h3>
+                <div key={date} className="animate-fadeIn">
+                  <div className="flex items-center mb-3 sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">
+                    <div className="h-6 w-1 bg-primary rounded-full mr-2"></div>
+                    <h3 className="text-md font-medium">{formatDate(date)}</h3>
+                  </div>
                   <div className="space-y-4">
                     {(dateSessions as any[]).map((session) => (
                       <Card
                         key={session.id}
-                        className="p-4 shadow-sm hover:shadow-md transition-shadow"
+                        isPressable
+                        as={Link}
+                        href={`/protected/sessions/${session.id}`}
+                        className="shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
                       >
-                        {/* Make header section stack on mobile, side-by-side on larger screens */}
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
-                          <div>
-                            <h3 className="text-lg font-bold mb-2">
-                              {session.workout.name}
-                            </h3>
-                            <div className="flex items-center gap-3 text-sm text-gray-600">
-                              <span>
-                                {formatDuration(
-                                  session.started_at,
-                                  session.ended_at
-                                )}
-                              </span>
-                              <span>•</span>
-                              <span>
-                                {session.session_exercises.length} sets
-                              </span>
+                        <CardBody className="p-0">
+                          <div className="p-4">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+                              <div>
+                                <h3 className="text-lg font-bold mb-1">
+                                  {session.workout.name}
+                                </h3>
+                                <div className="flex items-center flex-wrap gap-3 text-sm text-default-500">
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    <span>
+                                      {formatDuration(
+                                        session.started_at,
+                                        session.ended_at
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Dumbbell className="h-3.5 w-3.5" />
+                                    <span>
+                                      {session.session_exercises.length} sets
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <Chip
+                                size="sm"
+                                color="primary"
+                                variant="flat"
+                                className="self-start"
+                                startContent={
+                                  <Clock className="h-3 w-3 mr-1" />
+                                }
+                              >
+                                {new Date(
+                                  session.started_at
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </Chip>
                             </div>
                           </div>
-                          <Chip
-                            size="sm"
-                            color="primary"
-                            variant="flat"
-                            className="self-start"
-                          >
-                            {new Date(session.started_at).toLocaleTimeString(
-                              [],
-                              {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )}
-                          </Chip>
-                        </div>
-
-                        <Button
-                          as={Link}
-                          href={`/protected/sessions/${session.id}`}
-                          color="primary"
-                          variant="flat"
-                          size="sm"
-                          className="mt-2"
-                        >
-                          View Details
-                        </Button>
+                          <Divider />
+                          <div className="px-4 py-2 flex justify-between items-center bg-default-50/50 dark:bg-default-50/5">
+                            <span className="text-sm font-medium text-primary">
+                              View Details
+                            </span>
+                            <ChevronRight className="h-4 w-4 text-default-400" />
+                          </div>
+                        </CardBody>
                       </Card>
                     ))}
                   </div>
@@ -384,17 +516,24 @@ export default function SessionsPage() {
               )
             )}
 
-            {/* Pagination Controls */}
+            {/* Improved Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex justify-center mt-8">
+              <div className="flex justify-center mt-12 mb-4">
                 <Pagination
                   total={totalPages}
                   initialPage={currentPage}
                   page={currentPage}
-                  onChange={(page) => setCurrentPage(page)}
+                  onChange={(page) => {
+                    setCurrentPage(page);
+                    // Scroll back to top when changing pages
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   color="primary"
                   showControls
                   size="lg"
+                  classNames={{
+                    cursor: "shadow-md",
+                  }}
                 />
               </div>
             )}
