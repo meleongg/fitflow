@@ -5,7 +5,7 @@ import LogoutButton from "./logout-button";
 
 export default function PageTitle({
   title,
-  className = "mb-12", // Add default bottom margin
+  className = "mb-2", // Add default bottom margin
 }: {
   title: string;
   className?: string;

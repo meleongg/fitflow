@@ -284,7 +284,7 @@ export default function SessionsPage() {
       <PageTitle title="Workout History" />
 
       {/* Stats Summary Cards with Enhanced UI */}
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
+      <div className="mt-4 mb-8 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
         {isLoading ? (
           // Enhanced loading skeletons
           Array(4)
