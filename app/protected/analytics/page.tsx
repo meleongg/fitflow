@@ -320,7 +320,12 @@ export default function AnalyticsPage() {
                   className="md:w-1/2"
                 >
                   {exercises.map((exercise) => (
-                    <SelectItem key={exercise.id} value={exercise.id}>
+                    <SelectItem
+                      key={exercise.id}
+                      value={exercise.id}
+                      // Add textValue prop for accessibility
+                      textValue={`${exercise.name}${exercise.category ? ` (${exercise.category.name})` : ""}`}
+                    >
                       {exercise.name}{" "}
                       {exercise.category ? `(${exercise.category.name})` : ""}
                     </SelectItem>
@@ -333,19 +338,27 @@ export default function AnalyticsPage() {
                   onChange={(e) => setSelectedTimeframe(e.target.value)}
                   className="md:w-1/2"
                 >
-                  <SelectItem key="week" value="week">
+                  <SelectItem key="week" value="week" textValue="Last 7 Days">
                     Last 7 Days
                   </SelectItem>
-                  <SelectItem key="month" value="month">
+                  <SelectItem
+                    key="month"
+                    value="month"
+                    textValue="Last 30 Days"
+                  >
                     Last 30 Days
                   </SelectItem>
-                  <SelectItem key="3months" value="3months">
+                  <SelectItem
+                    key="3months"
+                    value="3months"
+                    textValue="Last 3 Months"
+                  >
                     Last 3 Months
                   </SelectItem>
-                  <SelectItem key="year" value="year">
+                  <SelectItem key="year" value="year" textValue="Last Year">
                     Last Year
                   </SelectItem>
-                  <SelectItem key="all" value="all">
+                  <SelectItem key="all" value="all" textValue="All Time">
                     All Time
                   </SelectItem>
                 </Select>
