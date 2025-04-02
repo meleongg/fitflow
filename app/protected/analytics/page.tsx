@@ -3,7 +3,7 @@
 import PageTitle from "@/components/ui/page-title";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { createClient } from "@/utils/supabase/client";
-import { kgToLbs } from "@/utils/units";
+import { displayWeight, kgToLbs } from "@/utils/units";
 import {
   Button,
   Card,
@@ -32,6 +32,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { toast } from "sonner";
 
 export default function AnalyticsPage() {
   const supabase = createClient();
@@ -48,14 +49,11 @@ export default function AnalyticsPage() {
   const [volumeData, setVolumeData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Helper function to display weight based on user preference
-  const displayWeight = (weightKg: number): string => {
-    return useMetric ? `${weightKg} kg` : `${kgToLbs(weightKg).toFixed(1)} lbs`;
-  };
-
   // Fetch user's exercises and session data
   useEffect(() => {
     const fetchData = async () => {
+      const loadingToast = toast.loading("Loading your fitness analytics...");
+
       try {
         setIsLoading(true);
         const {
@@ -63,6 +61,7 @@ export default function AnalyticsPage() {
         } = await supabase.auth.getUser();
 
         if (!user) {
+          toast.error("Authentication required");
           throw new Error("Not authenticated");
         }
 
@@ -88,24 +87,23 @@ export default function AnalyticsPage() {
           .eq("user_id", user.id)
           .order("session(started_at)", { ascending: false });
 
+        // Calculate and set data
         setExercises(exercisesData || []);
         setSessions(sessionsData || []);
-
-        // Calculate and set personal records
         calculatePersonalRecords(sessionsData || []);
 
-        // If an exercise is selected, fetch its specific data
-        if (selectedExercise) {
-          setIsChartLoading(true);
-          processExerciseData(
-            selectedExercise,
-            sessionsData || [],
-            selectedTimeframe
-          );
-          setIsChartLoading(false);
-        }
-      } catch (error) {
+        // Show success toast with key stats
+        toast.success(
+          `Loaded ${exercisesData?.length || 0} exercises and ${Object.keys(calculatePersonalRecords(sessionsData || [])).length || 0} personal records`,
+          {
+            id: loadingToast,
+          }
+        );
+      } catch (error: any) {
         console.error("Error fetching analytics data:", error);
+        toast.error(error.message || "Failed to load analytics data", {
+          id: loadingToast,
+        });
       } finally {
         setIsLoading(false);
       }
@@ -119,10 +117,25 @@ export default function AnalyticsPage() {
     setIsChartLoading(true);
     setSelectedExercise(value);
 
+    // Find the exercise name for the toast message
+    const selectedExerciseName =
+      exercises.find((ex) => ex.id === value)?.name || "Exercise";
+
     if (sessions.length > 0) {
-      processExerciseData(value, sessions, selectedTimeframe);
-      // Add a small delay to show the loading state
-      setTimeout(() => setIsChartLoading(false), 300);
+      try {
+        processExerciseData(value, sessions, selectedTimeframe);
+        // Add a small delay to show the loading state
+        setTimeout(() => {
+          setIsChartLoading(false);
+          // Only show toast if there's actual data
+          if (exerciseData.length > 0) {
+            toast.success(`Showing progress data for ${selectedExerciseName}`);
+          }
+        }, 300);
+      } catch (error: any) {
+        toast.error(`Error processing data: ${error.message}`);
+        setIsChartLoading(false);
+      }
     } else {
       setIsChartLoading(false);
     }
@@ -133,12 +146,46 @@ export default function AnalyticsPage() {
     setIsChartLoading(true);
     setSelectedTimeframe(value);
 
+    // Get the readable timeframe name for the toast
+    const timeframeLabels: Record<string, string> = {
+      week: "Last 7 Days",
+      month: "Last 30 Days",
+      "3months": "Last 3 Months",
+      year: "Last Year",
+      all: "All Time",
+    };
+
     if (selectedExercise && sessions.length > 0) {
-      processExerciseData(selectedExercise, sessions, value);
-      // Add a small delay to show the loading state
-      setTimeout(() => setIsChartLoading(false), 300);
+      try {
+        processExerciseData(selectedExercise, sessions, value);
+        // Add a small delay to show the loading state
+        setTimeout(() => {
+          setIsChartLoading(false);
+          // Only show toast if data exists
+          if (exerciseData.length > 0) {
+            toast(`Showing data for ${timeframeLabels[value] || value}`, {
+              icon: <TrendingUp className="h-4 w-4" />,
+            });
+          }
+        }, 300);
+      } catch (error) {
+        console.error("Error processing exercise data:", error);
+        setIsChartLoading(false);
+      }
     } else {
       setIsChartLoading(false);
+    }
+  };
+
+  // Handle tab changes
+  const handleTabChange = (key: React.Key) => {
+    setActiveTab(key as string);
+
+    // Show a toast only when changing to the records tab
+    if (key === "records" && personalRecords.length > 0) {
+      toast(`Viewing ${personalRecords.length} personal records`, {
+        icon: <Weight className="h-4 w-4" />,
+      });
     }
   };
 
@@ -178,6 +225,7 @@ export default function AnalyticsPage() {
     });
 
     setPersonalRecords(Object.values(records));
+    return records; // Return records for the toast notification
   };
 
   // Process data for an individual exercise
@@ -294,7 +342,7 @@ export default function AnalyticsPage() {
       {/* Tabs for different analysis views */}
       <Tabs
         selectedKey={activeTab}
-        onSelectionChange={(key) => setActiveTab(key as string)}
+        onSelectionChange={handleTabChange}
         color="primary"
         variant="underlined"
         className="mb-6 w-full"
@@ -612,30 +660,26 @@ export default function AnalyticsPage() {
                           Last PR: {formatDate(record.date)}
                         </p>
                         <div className="grid grid-cols-3 gap-2 mt-4">
-                          <div className="flex flex-col items-center p-2 bg-gray-50 rounded-md">
+                          <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                             <span className="text-sm text-gray-500">
                               Max Weight
                             </span>
                             <span className="font-bold">
-                              {useMetric
-                                ? `${record.max_weight} kg`
-                                : `${kgToLbs(record.max_weight).toFixed(1)} lbs`}
+                              {displayWeight(record.max_weight, useMetric)}
                             </span>
                           </div>
-                          <div className="flex flex-col items-center p-2 bg-gray-50 rounded-md">
+                          <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                             <span className="text-sm text-gray-500">
                               Max Reps
                             </span>
                             <span className="font-bold">{record.max_reps}</span>
                           </div>
-                          <div className="flex flex-col items-center p-2 bg-gray-50 rounded-md">
+                          <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                             <span className="text-sm text-gray-500">
                               Max Volume
                             </span>
                             <span className="font-bold">
-                              {useMetric
-                                ? `${record.max_volume} kg`
-                                : `${kgToLbs(record.max_volume).toFixed(1)} lbs`}
+                              {displayWeight(record.max_volume, useMetric)}
                             </span>
                           </div>
                         </div>
