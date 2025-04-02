@@ -13,6 +13,7 @@ import {
   Input,
   Select,
   SelectItem,
+  Skeleton,
   Spinner,
   Tab,
   Tabs,
@@ -36,6 +37,7 @@ export default function AnalyticsPage() {
   const supabase = createClient();
   const { useMetric } = useUnitPreference();
   const [isLoading, setIsLoading] = useState(true);
+  const [isChartLoading, setIsChartLoading] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState("all");
   const [activeTab, setActiveTab] = useState("progress");
@@ -94,11 +96,13 @@ export default function AnalyticsPage() {
 
         // If an exercise is selected, fetch its specific data
         if (selectedExercise) {
+          setIsChartLoading(true);
           processExerciseData(
             selectedExercise,
             sessionsData || [],
             selectedTimeframe
           );
+          setIsChartLoading(false);
         }
       } catch (error) {
         console.error("Error fetching analytics data:", error);
@@ -108,7 +112,35 @@ export default function AnalyticsPage() {
     };
 
     fetchData();
-  }, [selectedExercise, selectedTimeframe]);
+  }, []);
+
+  // Handle exercise selection with loading state
+  const handleExerciseChange = (value: string) => {
+    setIsChartLoading(true);
+    setSelectedExercise(value);
+
+    if (sessions.length > 0) {
+      processExerciseData(value, sessions, selectedTimeframe);
+      // Add a small delay to show the loading state
+      setTimeout(() => setIsChartLoading(false), 300);
+    } else {
+      setIsChartLoading(false);
+    }
+  };
+
+  // Handle timeframe selection with loading state
+  const handleTimeframeChange = (value: string) => {
+    setIsChartLoading(true);
+    setSelectedTimeframe(value);
+
+    if (selectedExercise && sessions.length > 0) {
+      processExerciseData(selectedExercise, sessions, value);
+      // Add a small delay to show the loading state
+      setTimeout(() => setIsChartLoading(false), 300);
+    } else {
+      setIsChartLoading(false);
+    }
+  };
 
   // Calculate personal records from session data
   const calculatePersonalRecords = (sessionsData: any[]) => {
@@ -303,8 +335,40 @@ export default function AnalyticsPage() {
       </Tabs>
 
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Spinner size="lg" />
+        // Enhanced loading state with skeletons instead of just a spinner
+        <div className="space-y-8">
+          {/* Skeleton for selectors */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <Skeleton className="h-12 w-full md:w-1/2 rounded-lg" />
+            <Skeleton className="h-12 w-full md:w-1/2 rounded-lg" />
+          </div>
+
+          {/* Skeleton for charts */}
+          <Card>
+            <CardHeader className="pb-0 pt-4 flex-col items-start">
+              <Skeleton className="h-6 w-48 rounded mb-2" />
+              <Skeleton className="h-4 w-72 rounded" />
+            </CardHeader>
+            <Divider className="my-2" />
+            <CardBody className="h-80">
+              <div className="h-full w-full flex items-center justify-center bg-default-100/50 rounded-lg">
+                <Spinner size="lg" />
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-0 pt-4 flex-col items-start">
+              <Skeleton className="h-6 w-48 rounded mb-2" />
+              <Skeleton className="h-4 w-72 rounded" />
+            </CardHeader>
+            <Divider className="my-2" />
+            <CardBody className="h-80">
+              <div className="h-full w-full flex items-center justify-center bg-default-100/50 rounded-lg">
+                <Spinner size="lg" />
+              </div>
+            </CardBody>
+          </Card>
         </div>
       ) : (
         <>
@@ -316,14 +380,14 @@ export default function AnalyticsPage() {
                   label="Select Exercise"
                   placeholder="Choose an exercise to analyze"
                   selectedKeys={selectedExercise ? [selectedExercise] : []}
-                  onChange={(e) => setSelectedExercise(e.target.value)}
+                  onChange={(e) => handleExerciseChange(e.target.value)}
                   className="md:w-1/2"
+                  isDisabled={isChartLoading}
                 >
                   {exercises.map((exercise) => (
                     <SelectItem
                       key={exercise.id}
                       value={exercise.id}
-                      // Add textValue prop for accessibility
                       textValue={`${exercise.name}${exercise.category ? ` (${exercise.category.name})` : ""}`}
                     >
                       {exercise.name}{" "}
@@ -335,8 +399,9 @@ export default function AnalyticsPage() {
                 <Select
                   label="Timeframe"
                   selectedKeys={[selectedTimeframe]}
-                  onChange={(e) => setSelectedTimeframe(e.target.value)}
+                  onChange={(e) => handleTimeframeChange(e.target.value)}
                   className="md:w-1/2"
+                  isDisabled={isChartLoading || !selectedExercise}
                 >
                   <SelectItem key="week" value="week" textValue="Last 7 Days">
                     Last 7 Days
@@ -364,114 +429,147 @@ export default function AnalyticsPage() {
                 </Select>
               </div>
 
-              {selectedExercise && exerciseData.length > 0 ? (
-                <div className="space-y-8">
-                  {/* Weight Progress Chart */}
-                  <Card>
-                    <CardHeader className="pb-0 pt-4 flex-col items-start">
-                      <p className="text-lg font-bold">Weight Progress</p>
-                      <p className="text-small text-default-500">
-                        Maximum weight used per workout session
-                      </p>
-                    </CardHeader>
-                    <Divider className="my-2" />
-                    <CardBody className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={exerciseData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            dataKey="formattedDate"
-                            tick={{ fontSize: 12 }}
-                          />
-                          <YAxis
-                            label={{
-                              value: `Weight (${useMetric ? "kg" : "lbs"})`,
-                              angle: -90,
-                              position: "insideLeft",
-                            }}
-                          />
-                          <Tooltip
-                            formatter={(value) => [
-                              `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
-                              "Max Weight",
-                            ]}
-                          />
-                          <Legend />
-                          <Line
-                            type="monotone"
-                            dataKey="maxWeight"
-                            name={`Max Weight (${useMetric ? "kg" : "lbs"})`}
-                            stroke="#8884d8"
-                            strokeWidth={2}
-                            dot={{ r: 4 }}
-                            activeDot={{ r: 6 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </CardBody>
-                  </Card>
+              {/* Charts section with loading states */}
+              {selectedExercise ? (
+                isChartLoading ? (
+                  // Skeleton for chart loading state
+                  <div className="space-y-8">
+                    <Card>
+                      <CardHeader className="pb-0 pt-4 flex-col items-start">
+                        <Skeleton className="h-6 w-48 rounded mb-2" />
+                        <Skeleton className="h-4 w-72 rounded" />
+                      </CardHeader>
+                      <Divider className="my-2" />
+                      <CardBody className="h-80 flex items-center justify-center">
+                        <Spinner size="lg" />
+                      </CardBody>
+                    </Card>
 
-                  {/* Volume Progress Chart */}
+                    <Card>
+                      <CardHeader className="pb-0 pt-4 flex-col items-start">
+                        <Skeleton className="h-6 w-48 rounded mb-2" />
+                        <Skeleton className="h-4 w-72 rounded" />
+                      </CardHeader>
+                      <Divider className="my-2" />
+                      <CardBody className="h-80 flex items-center justify-center">
+                        <Spinner size="lg" />
+                      </CardBody>
+                    </Card>
+                  </div>
+                ) : exerciseData.length > 0 ? (
+                  // Actual charts (unchanged)
+                  <div className="space-y-8">
+                    {/* Weight Progress Chart */}
+                    <Card>
+                      <CardHeader className="pb-0 pt-4 flex-col items-start">
+                        <p className="text-lg font-bold">Weight Progress</p>
+                        <p className="text-small text-default-500">
+                          Maximum weight used per workout session
+                        </p>
+                      </CardHeader>
+                      <Divider className="my-2" />
+                      <CardBody className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={exerciseData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="formattedDate"
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis
+                              label={{
+                                value: `Weight (${useMetric ? "kg" : "lbs"})`,
+                                angle: -90,
+                                position: "insideLeft",
+                              }}
+                            />
+                            <Tooltip
+                              formatter={(value) => [
+                                `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
+                                "Max Weight",
+                              ]}
+                            />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="maxWeight"
+                              name={`Max Weight (${useMetric ? "kg" : "lbs"})`}
+                              stroke="#8884d8"
+                              strokeWidth={2}
+                              dot={{ r: 4 }}
+                              activeDot={{ r: 6 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </CardBody>
+                    </Card>
+
+                    {/* Volume Progress Chart */}
+                    <Card>
+                      <CardHeader className="pb-0 pt-4 flex-col items-start">
+                        <p className="text-lg font-bold">Volume Progress</p>
+                        <p className="text-small text-default-500">
+                          Total workout volume (weight × reps) per session
+                        </p>
+                      </CardHeader>
+                      <Divider className="my-2" />
+                      <CardBody className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={exerciseData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="formattedDate"
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis
+                              label={{
+                                value: `Volume (${useMetric ? "kg" : "lbs"})`,
+                                angle: -90,
+                                position: "insideLeft",
+                              }}
+                            />
+                            <Tooltip
+                              formatter={(value) => [
+                                `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
+                                "Total Volume",
+                              ]}
+                            />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="totalVolume"
+                              name={`Total Volume (${useMetric ? "kg" : "lbs"})`}
+                              stroke="#82ca9d"
+                              strokeWidth={2}
+                              dot={{ r: 4 }}
+                              activeDot={{ r: 6 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </CardBody>
+                    </Card>
+                  </div>
+                ) : (
+                  // No data for selected exercise (unchanged)
                   <Card>
-                    <CardHeader className="pb-0 pt-4 flex-col items-start">
-                      <p className="text-lg font-bold">Volume Progress</p>
-                      <p className="text-small text-default-500">
-                        Total workout volume (weight × reps) per session
-                      </p>
-                    </CardHeader>
-                    <Divider className="my-2" />
-                    <CardBody className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={exerciseData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            dataKey="formattedDate"
-                            tick={{ fontSize: 12 }}
-                          />
-                          <YAxis
-                            label={{
-                              value: `Volume (${useMetric ? "kg" : "lbs"})`,
-                              angle: -90,
-                              position: "insideLeft",
-                            }}
-                          />
-                          <Tooltip
-                            formatter={(value) => [
-                              `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
-                              "Total Volume",
-                            ]}
-                          />
-                          <Legend />
-                          <Line
-                            type="monotone"
-                            dataKey="totalVolume"
-                            name={`Total Volume (${useMetric ? "kg" : "lbs"})`}
-                            stroke="#82ca9d"
-                            strokeWidth={2}
-                            dot={{ r: 4 }}
-                            activeDot={{ r: 6 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
+                    <CardBody className="py-8">
+                      <div className="text-center">
+                        <Dumbbell
+                          size={48}
+                          className="mx-auto text-gray-400 mb-3"
+                        />
+                        <p className="text-xl font-semibold">
+                          No data available
+                        </p>
+                        <p className="text-gray-500 mt-2">
+                          You haven't logged any sessions for this exercise yet.
+                        </p>
+                      </div>
                     </CardBody>
                   </Card>
-                </div>
-              ) : selectedExercise ? (
-                <Card>
-                  <CardBody className="py-8">
-                    <div className="text-center">
-                      <Dumbbell
-                        size={48}
-                        className="mx-auto text-gray-400 mb-3"
-                      />
-                      <p className="text-xl font-semibold">No data available</p>
-                      <p className="text-gray-500 mt-2">
-                        You haven't logged any sessions for this exercise yet.
-                      </p>
-                    </div>
-                  </CardBody>
-                </Card>
+                )
               ) : (
+                // No exercise selected (unchanged)
                 <Card>
                   <CardBody className="py-12">
                     <div className="text-center">
@@ -557,7 +655,24 @@ export default function AnalyticsPage() {
                     </Card>
                   ))}
                 </div>
+              ) : searchTerm ? (
+                // Searching with no results
+                <Card>
+                  <CardBody className="py-8">
+                    <div className="text-center">
+                      <Search
+                        size={48}
+                        className="mx-auto text-gray-400 mb-3"
+                      />
+                      <p className="text-xl font-semibold">No records found</p>
+                      <p className="text-gray-500 mt-2">
+                        Try a different search term
+                      </p>
+                    </div>
+                  </CardBody>
+                </Card>
               ) : (
+                // No records yet
                 <Card>
                   <CardBody className="py-8">
                     <div className="text-center">
@@ -567,9 +682,7 @@ export default function AnalyticsPage() {
                       />
                       <p className="text-xl font-semibold">No records found</p>
                       <p className="text-gray-500 mt-2">
-                        {searchTerm
-                          ? "Try a different search term"
-                          : "Complete workout sessions to start tracking your records"}
+                        Complete workout sessions to start tracking your records
                       </p>
                     </div>
                   </CardBody>
