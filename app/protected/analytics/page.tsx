@@ -8,7 +8,9 @@ import {
   Button,
   Card,
   CardBody,
+  CardFooter,
   CardHeader,
+  Chip,
   Divider,
   Input,
   Select,
@@ -17,18 +19,28 @@ import {
   Spinner,
   Tab,
   Tabs,
+  Tooltip,
 } from "@nextui-org/react";
-import { BarChart3, Dumbbell, Search, TrendingUp, Weight } from "lucide-react";
+import {
+  BarChart3,
+  Calendar,
+  ChevronRight,
+  Dumbbell,
+  Info,
+  Search,
+  TrendingUp,
+  Trophy,
+  Weight,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -336,93 +348,88 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <PageTitle title="Fitness Analytics" />
+    // Enhanced container with better width constraints
+    <div className="w-full p-4 space-y-6 animate-fadeIn">
+      <PageTitle title="Fitness Analytics" className="mb-6" />
 
-      {/* Tabs for different analysis views */}
-      <Tabs
-        selectedKey={activeTab}
-        onSelectionChange={handleTabChange}
-        color="primary"
-        variant="underlined"
-        className="mb-6 w-full"
-        classNames={{
-          tabList: "gap-4 w-full",
-          panel: "w-full",
-          base: "w-full",
-          tab: "max-w-fit",
-        }}
-      >
-        <Tab
-          key="progress"
-          title={
-            <div className="flex items-center gap-2">
-              <TrendingUp size={18} />
-              <span className="whitespace-nowrap">Progress Charts</span>
-            </div>
-          }
-        />
-        <Tab
-          key="records"
-          title={
-            <div className="flex items-center gap-2">
-              <Weight size={18} />
-              <span className="whitespace-nowrap">Personal Records</span>
-            </div>
-          }
-        />
-        <Tab
-          key="volume"
-          title={
-            <div className="flex items-center gap-2">
-              <BarChart3 size={18} />
-              <span className="whitespace-nowrap">Volume Analysis</span>
-            </div>
-          }
-        />
-      </Tabs>
+      {/* Enhanced Tabs with improved mobile appearance */}
+      <div className="relative">
+        <Tabs
+          selectedKey={activeTab}
+          onSelectionChange={handleTabChange}
+          color="primary"
+          variant="underlined"
+          className="mb-6 w-full"
+          classNames={{
+            tabList:
+              "gap-2 w-full relative overflow-x-auto pb-0 px-0 scrollbar-hide",
+            panel: "w-full pt-3",
+            cursor: "w-full",
+            tab: "max-w-fit px-3 h-10 data-[selected=true]:font-medium",
+            base: "w-full",
+          }}
+          aria-label="Analytics views"
+        >
+          <Tab
+            key="progress"
+            title={
+              <div className="flex items-center gap-2">
+                <TrendingUp size={16} />
+                <span>Progress</span>
+              </div>
+            }
+          />
+          <Tab
+            key="records"
+            title={
+              <div className="flex items-center gap-2">
+                <Trophy size={16} />
+                <span>Records</span>
+              </div>
+            }
+          />
+          <Tab
+            key="volume"
+            title={
+              <div className="flex items-center gap-2">
+                <BarChart3 size={16} />
+                <span>Volume</span>
+              </div>
+            }
+          />
+        </Tabs>
+      </div>
 
       {isLoading ? (
-        // Enhanced loading state with skeletons instead of just a spinner
+        // Improved loading skeleton
         <div className="space-y-8">
-          {/* Skeleton for selectors */}
+          {/* Improved skeleton animation */}
           <div className="flex flex-col md:flex-row gap-4">
-            <Skeleton className="h-12 w-full md:w-1/2 rounded-lg" />
-            <Skeleton className="h-12 w-full md:w-1/2 rounded-lg" />
+            <Skeleton className="h-12 w-full md:w-1/2 rounded-lg animate-pulse" />
+            <Skeleton className="h-12 w-full md:w-1/2 rounded-lg animate-pulse" />
           </div>
 
-          {/* Skeleton for charts */}
-          <Card>
+          {/* More realistic chart skeleton */}
+          <Card className="shadow-sm">
             <CardHeader className="pb-0 pt-4 flex-col items-start">
-              <Skeleton className="h-6 w-48 rounded mb-2" />
-              <Skeleton className="h-4 w-72 rounded" />
+              <Skeleton className="h-6 w-48 rounded mb-2 animate-pulse" />
+              <Skeleton className="h-4 w-72 rounded animate-pulse" />
             </CardHeader>
             <Divider className="my-2" />
             <CardBody className="h-80">
-              <div className="h-full w-full flex items-center justify-center bg-default-100/50 rounded-lg">
-                <Spinner size="lg" />
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-0 pt-4 flex-col items-start">
-              <Skeleton className="h-6 w-48 rounded mb-2" />
-              <Skeleton className="h-4 w-72 rounded" />
-            </CardHeader>
-            <Divider className="my-2" />
-            <CardBody className="h-80">
-              <div className="h-full w-full flex items-center justify-center bg-default-100/50 rounded-lg">
-                <Spinner size="lg" />
-              </div>
+              <Skeleton
+                className="h-full w-full rounded-lg"
+                disableAnimation={false}
+              />
             </CardBody>
           </Card>
         </div>
       ) : (
         <>
-          {/* Progress Charts View */}
+          {/* Progress Charts View - Enhanced for better mobile experience */}
           {activeTab === "progress" && (
             <div className="space-y-6">
+              {/* Better spaced form controls for mobile and desktop */}
               <div className="flex flex-col md:flex-row gap-4">
                 <Select
                   label="Select Exercise"
@@ -431,6 +438,10 @@ export default function AnalyticsPage() {
                   onChange={(e) => handleExerciseChange(e.target.value)}
                   className="md:w-1/2"
                   isDisabled={isChartLoading}
+                  classNames={{
+                    trigger: "h-12",
+                    value: "text-base",
+                  }}
                 >
                   {exercises.map((exercise) => (
                     <SelectItem
@@ -439,7 +450,16 @@ export default function AnalyticsPage() {
                       textValue={`${exercise.name}${exercise.category ? ` (${exercise.category.name})` : ""}`}
                     >
                       {exercise.name}{" "}
-                      {exercise.category ? `(${exercise.category.name})` : ""}
+                      {exercise.category && (
+                        <Chip
+                          size="sm"
+                          variant="flat"
+                          className="ml-2"
+                          color="primary"
+                        >
+                          {exercise.category.name}
+                        </Chip>
+                      )}
                     </SelectItem>
                   ))}
                 </Select>
@@ -450,6 +470,10 @@ export default function AnalyticsPage() {
                   onChange={(e) => handleTimeframeChange(e.target.value)}
                   className="md:w-1/2"
                   isDisabled={isChartLoading || !selectedExercise}
+                  classNames={{
+                    trigger: "h-12",
+                    value: "text-base",
+                  }}
                 >
                   <SelectItem key="week" value="week" textValue="Last 7 Days">
                     Last 7 Days
@@ -477,120 +501,157 @@ export default function AnalyticsPage() {
                 </Select>
               </div>
 
-              {/* Charts section with loading states */}
+              {/* Charts section with improved mobile experience */}
               {selectedExercise ? (
                 isChartLoading ? (
-                  // Skeleton for chart loading state
+                  // Better skeleton loading indication
                   <div className="space-y-8">
-                    <Card>
+                    <Card className="shadow-sm">
                       <CardHeader className="pb-0 pt-4 flex-col items-start">
                         <Skeleton className="h-6 w-48 rounded mb-2" />
                         <Skeleton className="h-4 w-72 rounded" />
                       </CardHeader>
                       <Divider className="my-2" />
-                      <CardBody className="h-80 flex items-center justify-center">
-                        <Spinner size="lg" />
-                      </CardBody>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-0 pt-4 flex-col items-start">
-                        <Skeleton className="h-6 w-48 rounded mb-2" />
-                        <Skeleton className="h-4 w-72 rounded" />
-                      </CardHeader>
-                      <Divider className="my-2" />
-                      <CardBody className="h-80 flex items-center justify-center">
-                        <Spinner size="lg" />
+                      <CardBody className="h-[400px] md:h-80 flex items-center justify-center">
+                        <div className="flex flex-col items-center">
+                          <Spinner size="lg" className="mb-2" />
+                          <span className="text-sm text-gray-500">
+                            Loading chart data...
+                          </span>
+                        </div>
                       </CardBody>
                     </Card>
                   </div>
                 ) : exerciseData.length > 0 ? (
-                  // Actual charts (unchanged)
+                  // Improved charts with better responsiveness
                   <div className="space-y-8">
-                    {/* Weight Progress Chart */}
-                    <Card>
+                    {/* Weight Progress Chart - Enhanced for better visibility on mobile */}
+                    <Card className="shadow-sm hover:shadow transition-shadow">
                       <CardHeader className="pb-0 pt-4 flex-col items-start">
-                        <p className="text-lg font-bold">Weight Progress</p>
+                        <div className="flex items-center justify-between w-full">
+                          <p className="text-lg font-bold">Weight Progress</p>
+                          <Tooltip content="Shows your maximum weight lifted for this exercise over time">
+                            <Button isIconOnly variant="light" size="sm">
+                              <Info size={16} className="text-default-400" />
+                            </Button>
+                          </Tooltip>
+                        </div>
                         <p className="text-small text-default-500">
                           Maximum weight used per workout session
                         </p>
                       </CardHeader>
                       <Divider className="my-2" />
-                      <CardBody className="h-80">
+                      <CardBody className="h-[400px] md:h-80 overflow-hidden">
+                        {/* Optimize chart for mobile with fewer x-axis ticks */}
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={exerciseData}>
-                            <CartesianGrid strokeDasharray="3 3" />
+                          <LineChart
+                            data={exerciseData}
+                            margin={{ left: 10, right: 10, bottom: 10 }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              vertical={false}
+                            />
                             <XAxis
                               dataKey="formattedDate"
-                              tick={{ fontSize: 12 }}
+                              tick={{ fontSize: 11 }}
+                              interval={window.innerWidth < 768 ? 2 : 0}
+                              axisLine={false}
                             />
                             <YAxis
                               label={{
-                                value: `Weight (${useMetric ? "kg" : "lbs"})`,
+                                value: useMetric ? "kg" : "lbs",
                                 angle: -90,
                                 position: "insideLeft",
+                                dx: -10,
+                                fontSize: 12,
                               }}
+                              tickFormatter={(value) => `${value}`}
+                              axisLine={false}
+                              dx={-5}
+                              tickLine={false}
                             />
-                            <Tooltip
+                            <RechartsTooltip
                               formatter={(value) => [
-                                `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
+                                displayWeight(Number(value), useMetric),
                                 "Max Weight",
                               ]}
+                              labelFormatter={(date) => `Date: ${date}`}
                             />
-                            <Legend />
                             <Line
                               type="monotone"
                               dataKey="maxWeight"
-                              name={`Max Weight (${useMetric ? "kg" : "lbs"})`}
+                              name="Max Weight"
                               stroke="#8884d8"
-                              strokeWidth={2}
-                              dot={{ r: 4 }}
-                              activeDot={{ r: 6 }}
+                              strokeWidth={3}
+                              dot={{ r: 5, strokeWidth: 2 }}
+                              activeDot={{ r: 7 }}
                             />
                           </LineChart>
                         </ResponsiveContainer>
                       </CardBody>
                     </Card>
 
-                    {/* Volume Progress Chart */}
-                    <Card>
+                    {/* Volume Progress Chart - Similar enhancements */}
+                    <Card className="shadow-sm hover:shadow transition-shadow">
                       <CardHeader className="pb-0 pt-4 flex-col items-start">
-                        <p className="text-lg font-bold">Volume Progress</p>
+                        <div className="flex items-center justify-between w-full">
+                          <p className="text-lg font-bold">Volume Progress</p>
+                          <Tooltip content="Shows your total workout volume (weight × reps) over time">
+                            <Button isIconOnly variant="light" size="sm">
+                              <Info size={16} className="text-default-400" />
+                            </Button>
+                          </Tooltip>
+                        </div>
                         <p className="text-small text-default-500">
-                          Total workout volume (weight × reps) per session
+                          Total workout volume per session
                         </p>
                       </CardHeader>
                       <Divider className="my-2" />
-                      <CardBody className="h-80">
+                      <CardBody className="h-[400px] md:h-80 overflow-hidden">
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={exerciseData}>
-                            <CartesianGrid strokeDasharray="3 3" />
+                          <LineChart
+                            data={exerciseData}
+                            margin={{ left: 10, right: 10, bottom: 10 }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              vertical={false}
+                            />
                             <XAxis
                               dataKey="formattedDate"
-                              tick={{ fontSize: 12 }}
+                              tick={{ fontSize: 11 }}
+                              interval={window.innerWidth < 768 ? 2 : 0}
+                              axisLine={false}
                             />
                             <YAxis
                               label={{
-                                value: `Volume (${useMetric ? "kg" : "lbs"})`,
+                                value: useMetric ? "kg" : "lbs",
                                 angle: -90,
                                 position: "insideLeft",
+                                dx: -10,
+                                fontSize: 12,
                               }}
+                              tickFormatter={(value) => `${value}`}
+                              axisLine={false}
+                              dx={-5}
+                              tickLine={false}
                             />
-                            <Tooltip
+                            <RechartsTooltip
                               formatter={(value) => [
-                                `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
+                                displayWeight(Number(value), useMetric),
                                 "Total Volume",
                               ]}
+                              labelFormatter={(date) => `Date: ${date}`}
                             />
-                            <Legend />
                             <Line
                               type="monotone"
                               dataKey="totalVolume"
-                              name={`Total Volume (${useMetric ? "kg" : "lbs"})`}
+                              name="Volume"
                               stroke="#82ca9d"
-                              strokeWidth={2}
-                              dot={{ r: 4 }}
-                              activeDot={{ r: 6 }}
+                              strokeWidth={3}
+                              dot={{ r: 5, strokeWidth: 2 }}
+                              activeDot={{ r: 7 }}
                             />
                           </LineChart>
                         </ResponsiveContainer>
@@ -598,39 +659,39 @@ export default function AnalyticsPage() {
                     </Card>
                   </div>
                 ) : (
-                  // No data for selected exercise (unchanged)
-                  <Card>
-                    <CardBody className="py-8">
+                  // Enhanced empty state for better UX
+                  <Card className="shadow-sm">
+                    <CardBody className="py-12 px-4">
                       <div className="text-center">
-                        <Dumbbell
-                          size={48}
-                          className="mx-auto text-gray-400 mb-3"
-                        />
+                        <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Dumbbell size={32} className="text-default-400" />
+                        </div>
                         <p className="text-xl font-semibold">
                           No data available
                         </p>
-                        <p className="text-gray-500 mt-2">
+                        <p className="text-gray-500 mt-2 max-w-md mx-auto">
                           You haven't logged any sessions for this exercise yet.
+                          Complete a workout with this exercise to see your
+                          progress.
                         </p>
                       </div>
                     </CardBody>
                   </Card>
                 )
               ) : (
-                // No exercise selected (unchanged)
-                <Card>
-                  <CardBody className="py-12">
+                // Enhanced select exercise prompt
+                <Card className="shadow-sm">
+                  <CardBody className="py-12 px-4">
                     <div className="text-center">
-                      <TrendingUp
-                        size={48}
-                        className="mx-auto text-gray-400 mb-3"
-                      />
+                      <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <TrendingUp size={32} className="text-primary/70" />
+                      </div>
                       <p className="text-xl font-semibold">
                         Select an exercise
                       </p>
-                      <p className="text-gray-500 mt-2">
-                        Choose an exercise from the dropdown to view your
-                        progress charts.
+                      <p className="text-gray-500 mt-2 max-w-md mx-auto">
+                        Choose an exercise from the dropdown above to view your
+                        progress charts and performance metrics.
                       </p>
                     </div>
                   </CardBody>
@@ -639,94 +700,143 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          {/* Personal Records View */}
+          {/* Personal Records View - Enhanced card design */}
           {activeTab === "records" && (
             <div className="space-y-6">
+              {/* Enhanced search with better mobile appearance */}
               <Input
                 placeholder="Search exercises..."
-                startContent={<Search size={18} className="text-default-400" />}
+                startContent={
+                  <Search
+                    size={18}
+                    className="text-default-400 flex-shrink-0"
+                  />
+                }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full md:w-1/2"
+                size="lg"
+                classNames={{
+                  inputWrapper: "h-12",
+                }}
               />
 
               {filteredRecords.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredRecords.map((record) => (
-                    <Card key={record.id} className="shadow-sm">
+                // Enhanced card grid with better spacing and visual improvements
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {filteredRecords.map((record, index) => (
+                    <Card
+                      key={record.id}
+                      className="shadow-sm hover:shadow transition-all duration-300"
+                      style={{
+                        animationDelay: `${index * 50}ms`,
+                        animationFillMode: "both",
+                      }}
+                    >
                       <CardBody className="p-4">
-                        <h3 className="font-bold text-lg">{record.name}</h3>
-                        <p className="text-gray-500 text-small mb-2">
-                          Last PR: {formatDate(record.date)}
-                        </p>
-                        <div className="grid grid-cols-3 gap-2 mt-4">
-                          <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                            <span className="text-sm text-gray-500">
+                        {/* Enhanced record header */}
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-bold text-lg line-clamp-1">
+                              {record.name}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-1 text-default-500 text-xs">
+                              <Calendar size={12} />
+                              <span>{formatDate(record.date)}</span>
+                            </div>
+                          </div>
+                          <Chip
+                            size="sm"
+                            variant="flat"
+                            color="primary"
+                            className="flex-shrink-0"
+                          >
+                            PR
+                          </Chip>
+                        </div>
+
+                        {/* Enhanced stats display */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex flex-col items-center p-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl">
+                            <span className="text-xs text-gray-500 mb-1">
                               Max Weight
                             </span>
-                            <span className="font-bold">
+                            <span className="font-bold text-sm md:text-base">
                               {displayWeight(record.max_weight, useMetric)}
                             </span>
                           </div>
-                          <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                            <span className="text-sm text-gray-500">
+                          <div className="flex flex-col items-center p-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl">
+                            <span className="text-xs text-gray-500 mb-1">
                               Max Reps
                             </span>
-                            <span className="font-bold">{record.max_reps}</span>
+                            <span className="font-bold text-base">
+                              {record.max_reps}
+                            </span>
                           </div>
-                          <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                            <span className="text-sm text-gray-500">
+                          <div className="flex flex-col items-center p-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl">
+                            <span className="text-xs text-gray-500 mb-1">
                               Max Volume
                             </span>
-                            <span className="font-bold">
+                            <span className="font-bold text-sm md:text-base">
                               {displayWeight(record.max_volume, useMetric)}
                             </span>
                           </div>
                         </div>
+                      </CardBody>
+                      <CardFooter className="pt-0">
                         <Button
                           color="primary"
                           variant="flat"
                           size="sm"
-                          className="mt-4 w-full"
+                          className="w-full"
                           onPress={() => {
                             setSelectedExercise(record.id);
                             setActiveTab("progress");
                           }}
+                          endContent={<ChevronRight size={14} />}
                         >
                           View Progress
                         </Button>
-                      </CardBody>
+                      </CardFooter>
                     </Card>
                   ))}
                 </div>
               ) : searchTerm ? (
-                // Searching with no results
+                // Enhanced search results empty state
                 <Card>
-                  <CardBody className="py-8">
+                  <CardBody className="py-10 px-4">
                     <div className="text-center">
-                      <Search
-                        size={48}
-                        className="mx-auto text-gray-400 mb-3"
-                      />
+                      <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Search size={28} className="text-default-400" />
+                      </div>
                       <p className="text-xl font-semibold">No records found</p>
                       <p className="text-gray-500 mt-2">
-                        Try a different search term
+                        No exercises match "{searchTerm}"
                       </p>
+                      <Button
+                        color="primary"
+                        variant="light"
+                        className="mt-4"
+                        onPress={() => setSearchTerm("")}
+                      >
+                        Clear search
+                      </Button>
                     </div>
                   </CardBody>
                 </Card>
               ) : (
-                // No records yet
+                // Enhanced empty state for no records
                 <Card>
-                  <CardBody className="py-8">
+                  <CardBody className="py-12 px-4">
                     <div className="text-center">
-                      <Weight
-                        size={48}
-                        className="mx-auto text-gray-400 mb-3"
-                      />
-                      <p className="text-xl font-semibold">No records found</p>
-                      <p className="text-gray-500 mt-2">
-                        Complete workout sessions to start tracking your records
+                      <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Trophy size={28} className="text-warning" />
+                      </div>
+                      <p className="text-xl font-semibold">No records yet</p>
+                      <p className="text-gray-500 mt-2 max-w-md mx-auto">
+                        Complete workout sessions to start tracking your
+                        personal records. Each time you lift a new maximum
+                        weight, it will appear here.
                       </p>
                     </div>
                   </CardBody>
@@ -735,65 +845,97 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          {/* Volume Analysis View */}
+          {/* Volume Analysis View - Enhanced for mobile */}
           {activeTab === "volume" && (
             <div>
-              <Card>
+              <Card className="shadow-sm hover:shadow transition-shadow">
                 <CardHeader className="pb-0 pt-4 flex-col items-start">
-                  <p className="text-lg font-bold">
-                    Top 10 Exercises by Volume
-                  </p>
+                  <div className="flex items-center justify-between w-full">
+                    <p className="text-lg font-bold">
+                      Top 10 Exercises by Volume
+                    </p>
+                    <Tooltip content="Shows your exercises ranked by total volume lifted (weight × reps)">
+                      <Button isIconOnly variant="light" size="sm">
+                        <Info size={16} className="text-default-400" />
+                      </Button>
+                    </Tooltip>
+                  </div>
                   <p className="text-small text-default-500">
-                    Total volume lifted (weight × reps) across all sessions
+                    Total volume lifted across all sessions
                   </p>
                 </CardHeader>
                 <Divider className="my-2" />
-                <CardBody className="h-96">
+                <CardBody className="h-[500px] md:h-96">
                   {volumeData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={volumeData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" />
+                      <BarChart
+                        data={volumeData}
+                        layout="vertical"
+                        margin={{
+                          left: 20,
+                          right: 30,
+                          bottom: 5,
+                          top: 5,
+                        }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          horizontal={true}
+                          vertical={false}
+                        />
                         <XAxis
                           type="number"
-                          label={{
-                            value: `Volume (${useMetric ? "kg" : "lbs"})`,
-                            position: "insideBottom",
-                            offset: -5,
-                          }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={(value) =>
+                            `${(useMetric ? value : kgToLbs(value)).toFixed(0)}`
+                          }
                         />
                         <YAxis
                           dataKey="name"
                           type="category"
-                          width={150}
-                          tick={{ fontSize: 12 }}
+                          width={window.innerWidth < 640 ? 100 : 150}
+                          tick={{
+                            fontSize: window.innerWidth < 640 ? 10 : 12,
+                          }}
+                          tickFormatter={(value) =>
+                            window.innerWidth < 480 && value.length > 12
+                              ? `${value.substring(0, 10)}...`
+                              : value
+                          }
                         />
-                        <Tooltip
+                        <RechartsTooltip
                           formatter={(value) => [
-                            `${useMetric ? value : kgToLbs(Number(value)).toFixed(1)} ${useMetric ? "kg" : "lbs"}`,
+                            displayWeight(Number(value), useMetric),
                             "Volume",
                           ]}
+                          labelFormatter={(name) => `Exercise: ${name}`}
+                          cursor={{ fill: "rgba(136, 132, 216, 0.1)" }}
                         />
-                        <Legend />
                         <Bar
                           dataKey="volume"
-                          name={`Total Volume (${useMetric ? "kg" : "lbs"})`}
+                          name={`Volume (${useMetric ? "kg" : "lbs"})`}
                           fill="#8884d8"
                           radius={[0, 4, 4, 0]}
+                          barSize={window.innerWidth < 640 ? 15 : 20}
+                          animationDuration={1000}
                         />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex justify-center items-center h-64">
+                    // Enhanced empty state for volume
+                    <div className="flex justify-center items-center h-full">
                       <div className="text-center">
-                        <BarChart3
-                          size={48}
-                          className="mx-auto text-gray-400 mb-3"
-                        />
+                        <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <BarChart3 size={32} className="text-default-400" />
+                        </div>
                         <p className="text-xl font-semibold">
                           No volume data available
                         </p>
-                        <p className="text-gray-500 mt-2">
-                          Complete workout sessions to see volume analysis
+                        <p className="text-gray-500 mt-2 max-w-md mx-auto">
+                          Complete workout sessions to see your volume analysis.
+                          This will help you track your overall training load
+                          over time.
                         </p>
                       </div>
                     </div>
@@ -804,6 +946,30 @@ export default function AnalyticsPage() {
           )}
         </>
       )}
+
+      {/* Add global styles for animations and mobile optimizations */}
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }
