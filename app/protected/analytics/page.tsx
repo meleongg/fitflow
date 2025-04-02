@@ -60,6 +60,18 @@ export default function AnalyticsPage() {
   const [personalRecords, setPersonalRecords] = useState<any[]>([]);
   const [volumeData, setVolumeData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [exerciseSearchTerm, setExerciseSearchTerm] = useState("");
+  const [isExerciseDropdownOpen, setIsExerciseDropdownOpen] = useState(false);
+
+  // Add this filtered exercises data computed from search term
+  const filteredExercises = exercises.filter(
+    (exercise) =>
+      exerciseSearchTerm === "" ||
+      exercise.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase()) ||
+      (exercise.category?.name || "")
+        .toLowerCase()
+        .includes(exerciseSearchTerm.toLowerCase())
+  );
 
   // Fetch user's exercises and session data
   useEffect(() => {
@@ -139,10 +151,6 @@ export default function AnalyticsPage() {
         // Add a small delay to show the loading state
         setTimeout(() => {
           setIsChartLoading(false);
-          // Only show toast if there's actual data
-          if (exerciseData.length > 0) {
-            toast.success(`Showing progress data for ${selectedExerciseName}`);
-          }
         }, 300);
       } catch (error: any) {
         toast.error(`Error processing data: ${error.message}`);
@@ -429,41 +437,129 @@ export default function AnalyticsPage() {
           {/* Progress Charts View - Enhanced for better mobile experience */}
           {activeTab === "progress" && (
             <div className="space-y-6">
-              {/* Better spaced form controls for mobile and desktop */}
+              {/* Add search input above dropdowns */}
               <div className="flex flex-col md:flex-row gap-4">
-                <Select
-                  label="Select Exercise"
-                  placeholder="Choose an exercise to analyze"
-                  selectedKeys={selectedExercise ? [selectedExercise] : []}
-                  onChange={(e) => handleExerciseChange(e.target.value)}
-                  className="md:w-1/2"
-                  isDisabled={isChartLoading}
-                  classNames={{
-                    trigger: "h-12",
-                    value: "text-base",
-                  }}
-                >
-                  {exercises.map((exercise) => (
-                    <SelectItem
-                      key={exercise.id}
-                      value={exercise.id}
-                      textValue={`${exercise.name}${exercise.category ? ` (${exercise.category.name})` : ""}`}
-                    >
-                      {exercise.name}{" "}
-                      {exercise.category && (
-                        <Chip
-                          size="sm"
-                          variant="flat"
-                          className="ml-2"
-                          color="primary"
-                        >
-                          {exercise.category.name}
-                        </Chip>
-                      )}
-                    </SelectItem>
-                  ))}
-                </Select>
+                {/* Search input for exercises */}
+                <div className="md:w-1/2 space-y-2">
+                  <label className="block text-small font-medium pb-1.5">
+                    Select Exercise
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      placeholder="Search and select an exercise..."
+                      value={exerciseSearchTerm}
+                      onChange={(e) => setExerciseSearchTerm(e.target.value)}
+                      startContent={
+                        <Search size={16} className="text-default-400" />
+                      }
+                      isClearable={exerciseSearchTerm.length > 0}
+                      onClear={() => {
+                        setExerciseSearchTerm("");
+                        setSelectedExercise(null);
+                      }}
+                      classNames={{
+                        inputWrapper: "h-12",
+                      }}
+                      // Add focus handler to show all options when focused
+                      onFocus={() => setIsExerciseDropdownOpen(true)}
+                      onBlur={() => {
+                        // Add small delay to allow click on options to register
+                        setTimeout(() => setIsExerciseDropdownOpen(false), 200);
+                      }}
+                    />
 
+                    {/* Show dropdown on focus or when typing - with improved spacing */}
+                    {(isExerciseDropdownOpen ||
+                      exerciseSearchTerm.length > 0) && (
+                      <Card className="absolute w-full mt-1 z-50 max-h-80 overflow-auto shadow-lg">
+                        <CardBody className="p-0">
+                          {filteredExercises.length > 0 ? (
+                            <div className="flex flex-col">
+                              {filteredExercises.map((exercise) => (
+                                <Button
+                                  key={exercise.id}
+                                  variant="light"
+                                  className={`w-full justify-start h-10 px-4 rounded-none border-b border-default-100 ${
+                                    selectedExercise === exercise.id
+                                      ? "bg-primary-100"
+                                      : ""
+                                  }`}
+                                  onPress={() => {
+                                    handleExerciseChange(exercise.id);
+                                    setExerciseSearchTerm("");
+                                    setIsExerciseDropdownOpen(false);
+                                  }}
+                                  endContent={
+                                    exercise.category && (
+                                      <Chip
+                                        size="sm"
+                                        variant="flat"
+                                        className="ml-2"
+                                        color="primary"
+                                      >
+                                        {exercise.category.name}
+                                      </Chip>
+                                    )
+                                  }
+                                >
+                                  {exercise.name}
+                                </Button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-4 text-center text-default-500">
+                              No matching exercises
+                            </div>
+                          )}
+                        </CardBody>
+                      </Card>
+                    )}
+
+                    {/* Show selected exercise */}
+                    {selectedExercise &&
+                      !exerciseSearchTerm &&
+                      !isExerciseDropdownOpen && (
+                        <div className="flex items-center justify-between mt-2 p-2 bg-default-100 rounded-md">
+                          <div className="flex items-center">
+                            <Dumbbell size={16} className="text-primary mr-2" />
+                            <span>
+                              {
+                                exercises.find(
+                                  (ex) => ex.id === selectedExercise
+                                )?.name
+                              }
+                            </span>
+                            {exercises.find((ex) => ex.id === selectedExercise)
+                              ?.category && (
+                              <Chip
+                                size="sm"
+                                variant="flat"
+                                className="ml-2"
+                                color="primary"
+                              >
+                                {
+                                  exercises.find(
+                                    (ex) => ex.id === selectedExercise
+                                  )?.category?.name
+                                }
+                              </Chip>
+                            )}
+                          </div>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            onPress={() => setSelectedExercise(null)}
+                          >
+                            <span className="text-default-400">✕</span>
+                          </Button>
+                        </div>
+                      )}
+                  </div>
+                </div>
+
+                {/* Keep the timeframe selector */}
                 <Select
                   label="Timeframe"
                   selectedKeys={[selectedTimeframe]}
@@ -501,7 +597,7 @@ export default function AnalyticsPage() {
                 </Select>
               </div>
 
-              {/* Charts section with improved mobile experience */}
+              {/* Rest of your progress tab content remains unchanged */}
               {selectedExercise ? (
                 isChartLoading ? (
                   // Better skeleton loading indication
