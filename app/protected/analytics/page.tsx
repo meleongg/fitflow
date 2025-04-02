@@ -115,6 +115,7 @@ export default function AnalyticsPage() {
         setExercises(exercisesData || []);
         setSessions(sessionsData || []);
         calculatePersonalRecords(sessionsData || []);
+        calculateVolumeData(sessionsData || []); // Add this line
 
         // Show success toast with key stats
         toast.success(
@@ -135,6 +136,24 @@ export default function AnalyticsPage() {
 
     fetchData();
   }, []);
+
+  // Add this useEffect to process data whenever selectedExercise changes or tab switches to "progress"
+  useEffect(() => {
+    if (selectedExercise && activeTab === "progress" && !isChartLoading) {
+      setIsChartLoading(true);
+
+      try {
+        processExerciseData(selectedExercise, sessions, selectedTimeframe);
+        // Add a small delay to show the loading state
+        setTimeout(() => {
+          setIsChartLoading(false);
+        }, 300);
+      } catch (error: any) {
+        toast.error(`Error processing data: ${error.message}`);
+        setIsChartLoading(false);
+      }
+    }
+  }, [selectedExercise, activeTab]);
 
   // Handle exercise selection with loading state
   const handleExerciseChange = (value: string) => {
@@ -206,6 +225,11 @@ export default function AnalyticsPage() {
       toast(`Viewing ${personalRecords.length} personal records`, {
         icon: <Weight className="h-4 w-4" />,
       });
+    }
+
+    // Ensure volume data is calculated when switching to that tab
+    if (key === "volume" && sessions.length > 0) {
+      calculateVolumeData(sessions);
     }
   };
 
@@ -320,6 +344,36 @@ export default function AnalyticsPage() {
         const exerciseId = session.exercise_id;
         const exerciseName = session.exercise?.name;
         const volume = session.reps * session.weight;
+
+        if (!acc[exerciseName]) {
+          acc[exerciseName] = 0;
+        }
+        acc[exerciseName] += volume;
+        return acc;
+      },
+      {}
+    );
+
+    const volumeChartData = Object.entries(volumeByExercise)
+      .map(([name, volume]) => ({
+        name,
+        volume,
+      }))
+      .sort((a, b) => b.volume - a.volume)
+      .slice(0, 10); // Top 10 by volume
+
+    setVolumeData(volumeChartData);
+  };
+
+  // Add this function to calculate volume data independently
+  const calculateVolumeData = (sessionsData: any[]) => {
+    // Calculate volume trends by exercise
+    const volumeByExercise = sessionsData.reduce(
+      (acc: { [key: string]: number }, session) => {
+        const exerciseName = session.exercise?.name;
+        const volume = session.reps * session.weight;
+
+        if (!exerciseName) return acc;
 
         if (!acc[exerciseName]) {
           acc[exerciseName] = 0;
