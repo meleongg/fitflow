@@ -47,11 +47,16 @@ type CategoryExercises = {
   [category: string]: any[];
 };
 
-// Fetch workout data
+// Fetch workout data with category
 const getWorkoutData = async (supabase: any, workoutId: string) => {
   const { data: workout, error } = await supabase
     .from("workouts")
-    .select("*")
+    .select(
+      `
+      *,
+      category:categories(*)
+    `
+    )
     .eq("id", workoutId)
     .single();
 
@@ -293,6 +298,19 @@ export default function ViewWorkout() {
             </h3>
 
             <div className="space-y-3">
+              {/* Add this section for category */}
+              {workout.category && (
+                <div className="flex items-center gap-2">
+                  <ScrollText className="h-4 w-4 text-primary" />
+                  <span className="text-sm">
+                    Category:{" "}
+                    <Chip size="sm" variant="flat" color="primary">
+                      {workout.category.name}
+                    </Chip>
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <Dumbbell className="h-4 w-4 text-primary" />
                 <span className="text-sm">
