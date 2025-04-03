@@ -38,7 +38,12 @@ import { toast } from "sonner";
 const getWorkoutData = async (supabase: any, workoutId: string) => {
   const { data: workout, error } = await supabase
     .from("workouts")
-    .select("*")
+    .select(
+      `
+      *,
+      category:categories(*)
+    `
+    )
     .eq("id", workoutId)
     .single();
 
@@ -130,6 +135,9 @@ export default function EditWorkout() {
     [key: number]: string;
   }>({});
 
+  // Add state for workout category
+  const [workoutCategory, setWorkoutCategory] = useState<string | null>(null);
+
   // Fetch paginated exercises
   const fetchExercises = async (
     page: number,
@@ -207,6 +215,10 @@ export default function EditWorkout() {
     if (workout) {
       setWorkoutName(workout.name);
       setWorkoutDescription(workout.description);
+      // Set the category if present
+      if (workout.category_id) {
+        setWorkoutCategory(workout.category_id.toString());
+      }
     }
   }, [workout]);
 
@@ -361,12 +373,13 @@ export default function EditWorkout() {
         throw new Error("No authenticated user found");
       }
 
-      // Update the workout
+      // Update the workout with category
       const { error: workoutError } = await supabase
         .from("workouts")
         .update({
           name: workoutName,
           description: workoutDescription,
+          category_id: workoutCategory ? parseInt(workoutCategory) : null, // Add this line
         })
         .eq("id", workoutId);
 
@@ -599,6 +612,25 @@ export default function EditWorkout() {
               onChange={(e) => setWorkoutDescription(e.target.value)}
               placeholder="Enter workout description (optional)"
             />
+
+            {/* Add category selector */}
+            <Select
+              label="Category"
+              labelPlacement="outside"
+              placeholder="Select a category"
+              selectedKeys={workoutCategory ? [workoutCategory] : []}
+              onChange={(e) => setWorkoutCategory(e.target.value)}
+              className="w-full"
+            >
+              {categories.map((category) => (
+                <SelectItem
+                  key={category.id.toString()}
+                  value={category.id.toString()}
+                >
+                  {category.name}
+                </SelectItem>
+              ))}
+            </Select>
 
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-lg font-semibold">Exercises</h2>
