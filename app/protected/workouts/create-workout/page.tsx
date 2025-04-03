@@ -120,6 +120,23 @@ const CreateWorkoutPage = () => {
   // Add this state near your other state declarations
   const [isProgrammaticReset, setIsProgrammaticReset] = useState(false);
 
+  // Add this state for selected workout category
+  const [workoutCategory, setWorkoutCategory] = useState<string | null>(null);
+
+  // Find "Other" category ID to set as default
+  useEffect(() => {
+    if (categories.length > 0 && !workoutCategory) {
+      const otherCategory = categories.find(
+        (c) => c.name.toLowerCase() === "other"
+      );
+      if (otherCategory) {
+        setWorkoutCategory(otherCategory.id.toString());
+      } else if (categories.length > 0) {
+        setWorkoutCategory(categories[0].id.toString());
+      }
+    }
+  }, [categories, workoutCategory]);
+
   // Update fetchExercises to return a Promise
   const fetchExercises = async (
     page: number,
@@ -410,6 +427,7 @@ const CreateWorkoutPage = () => {
           name: workoutName,
           description: workoutDescription,
           user_id: user.id,
+          category_id: workoutCategory ? parseInt(workoutCategory) : null, // Add this line
         })
         .select()
         .single();
@@ -529,8 +547,17 @@ const CreateWorkoutPage = () => {
           // Clear all workout exercises
           setWorkoutExercises([]);
 
-          // Reset selected category if needed
-          setSelectedCategory(undefined);
+          // Reset selected category to default
+          const otherCategory = categories.find(
+            (c) => c.name.toLowerCase() === "other"
+          );
+          if (otherCategory) {
+            setWorkoutCategory(otherCategory.id.toString());
+          } else if (categories.length > 0) {
+            setWorkoutCategory(categories[0].id.toString());
+          } else {
+            setWorkoutCategory(null);
+          }
 
           // Check the custom attribute instead of state
           const isProgrammatic =
@@ -570,6 +597,25 @@ const CreateWorkoutPage = () => {
             placeholder="Enter workout description (optional)"
             type="text"
           />
+
+          {/* Add category dropdown here */}
+          <Select
+            label="Category"
+            labelPlacement="outside"
+            placeholder="Select workout category"
+            selectedKeys={workoutCategory ? [workoutCategory] : []}
+            onChange={(e) => setWorkoutCategory(e.target.value)}
+            className="w-full"
+          >
+            {categories.map((category) => (
+              <SelectItem
+                key={category.id.toString()}
+                value={category.id.toString()}
+              >
+                {category.name}
+              </SelectItem>
+            ))}
+          </Select>
 
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-lg font-semibold">Exercises</h2>
