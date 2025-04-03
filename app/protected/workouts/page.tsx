@@ -7,24 +7,30 @@ import { createClient } from "@/utils/supabase/client";
 import {
   Button,
   Card,
+  Chip,
   Dropdown,
   DropdownItem,
   DropdownMenu,
   DropdownTrigger,
+  Input,
   Modal,
   ModalBody,
   ModalContent,
   ModalFooter,
   ModalHeader,
   Pagination,
+  Select,
+  SelectItem,
   Skeleton,
 } from "@nextui-org/react";
 import {
+  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   Dumbbell,
   EllipsisVertical,
   Plus,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -248,19 +254,102 @@ export default function WorkoutsPage() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const supabase = createClient();
 
+  // Add these new states
+  const [sortOption, setSortOption] = useState("newest");
+  const [filterOption, setFilterOption] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // First, add a TypeScript interface for your category at the top of your file
+  interface WorkoutCategory {
+    id: number | string;
+    name: string;
+  }
+
+  // Add this state at the top of your component
+  const [categories, setCategories] = useState<WorkoutCategory[]>([]);
+
+  // Add this function to fetch categories
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+    }
+  };
+
   // Load workouts with pagination
   const loadWorkouts = async (page = currentPage) => {
     try {
       if (!isInitialLoad) setIsLoading(true);
 
-      const { workouts: data, totalPages: pages } = await getWorkoutData(
-        supabase,
-        page,
-        pageSize
-      );
+      // Start building the main query
+      let query = supabase.from("workouts").select(`
+          *,
+          category:categories(*),
+          workout_exercises(exercise_id, exercises(name, category_id, categories(name)))
+        `);
+
+      // Build the count query FIRST (before using it)
+      let countQuery = supabase
+        .from("workouts")
+        .select("id", { count: "exact" });
+
+      // Apply filters to BOTH queries
+      if (filterOption !== "all") {
+        query = query.eq("category_id", filterOption);
+        countQuery = countQuery.eq("category_id", filterOption);
+      }
+
+      // Apply search to BOTH queries
+      if (searchQuery) {
+        query = query.ilike("name", `%${searchQuery}%`);
+        countQuery = countQuery.ilike("name", `%${searchQuery}%`);
+      }
+
+      // Execute count query
+      const { count, error: countError } = await countQuery;
+
+      if (countError) throw countError;
+      const totalCount = count || 0;
+
+      // Apply sorting to main query
+      switch (sortOption) {
+        case "newest":
+          query = query.order("created_at", { ascending: false });
+          break;
+        case "oldest":
+          query = query.order("created_at", { ascending: true });
+          break;
+        case "name_asc":
+          query = query.order("name", { ascending: true });
+          break;
+        case "name_desc":
+          query = query.order("name", { ascending: false });
+          break;
+        case "most_used":
+          query = query.order("last_used_at", {
+            ascending: false,
+            nullsFirst: false,
+          });
+          break;
+      }
+
+      // Apply pagination
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      const { data, error } = await query.range(start, end);
+
+      if (error) throw error;
 
       setWorkouts(data);
-      setTotalPages(pages);
+      setTotalPages(Math.ceil(totalCount / pageSize));
 
       // Short timeout to ensure smooth transitions
       setTimeout(() => {
@@ -275,8 +364,17 @@ export default function WorkoutsPage() {
     }
   };
 
+  // Add this effect to reload when sort/filter changes
+  useEffect(() => {
+    if (!isInitialLoad) {
+      setCurrentPage(1); // Reset to first page when filters change
+      loadWorkouts(1);
+    }
+  }, [sortOption, filterOption, searchQuery]);
+
   // Initial load
   useEffect(() => {
+    fetchCategories();
     loadWorkouts(1);
   }, []);
 
@@ -297,6 +395,74 @@ export default function WorkoutsPage() {
       <ActiveSessionBanner />
 
       <PageTitle title="Workouts" />
+
+      {/* Add search, sort and filter controls */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 w-full">
+          {/* Search input */}
+          <Input
+            placeholder="Search workouts..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            startContent={<Search className="text-default-400 h-4 w-4" />}
+            isClearable
+            onClear={() => setSearchQuery("")}
+            className="w-full sm:w-1/3"
+          />
+
+          {/* Sort dropdown */}
+          <Select
+            aria-label="Sort workouts"
+            placeholder="Sort by"
+            selectedKeys={[sortOption]}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="w-full sm:w-auto"
+            startContent={<ArrowUpDown className="text-default-400 h-4 w-4" />}
+          >
+            <SelectItem key="newest" value="newest">
+              Newest first
+            </SelectItem>
+            <SelectItem key="oldest" value="oldest">
+              Oldest first
+            </SelectItem>
+            <SelectItem key="name_asc" value="name_asc">
+              Name (A-Z)
+            </SelectItem>
+            <SelectItem key="name_desc" value="name_desc">
+              Name (Z-A)
+            </SelectItem>
+            <SelectItem key="most_used" value="most_used">
+              Most used
+            </SelectItem>
+          </Select>
+        </div>
+
+        {/* Filter chips */}
+        <div className="flex flex-wrap gap-2">
+          <Chip
+            variant={filterOption === "all" ? "solid" : "flat"}
+            color="primary"
+            className="cursor-pointer"
+            onClick={() => setFilterOption("all")}
+          >
+            All
+          </Chip>
+
+          {/* Dynamic category chips */}
+          {categories.map((category) => (
+            <Chip
+              key={category.id}
+              variant={
+                filterOption === category.id.toString() ? "solid" : "flat"
+              }
+              className="cursor-pointer"
+              onClick={() => setFilterOption(category.id.toString())}
+            >
+              {category.name}
+            </Chip>
+          ))}
+        </div>
+      </div>
 
       <div
         className="flex flex-col sm:flex-row justify-between items-center gap-4"
@@ -405,7 +571,17 @@ export default function WorkoutsPage() {
                     </div>
                   </div>
 
-                  {/* Rest of card content... */}
+                  {/* Category and other metadata */}
+                  <div className="flex items-center gap-2 mt-3">
+                    {workout.category && (
+                      <Chip size="sm" variant="flat" color="primary">
+                        {workout.category.name}
+                      </Chip>
+                    )}
+                    <Chip size="sm" variant="flat">
+                      {workout.workout_exercises.length} exercises
+                    </Chip>
+                  </div>
                 </Card>
               ))}
             </div>
