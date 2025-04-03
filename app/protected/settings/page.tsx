@@ -10,14 +10,8 @@ import {
   CardHeader,
   Divider,
   Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
   Select,
   SelectItem,
-  Spinner,
   Switch,
   Tab,
   Tabs,
@@ -324,16 +318,88 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="p-4 flex justify-center items-center h-64">
-        <Spinner size="lg" />
+      <div className="p-4 md:p-6 pb-16 space-y-6 w-full max-w-5xl mx-auto min-w-[320px]">
+        <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
+
+        {/* Tab skeleton */}
+        <div className="border-b border-divider w-full">
+          <div className="flex gap-4 mb-2">
+            <div className="h-10 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-10 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse opacity-60" />
+          </div>
+          <div className="h-0.5 w-28 bg-primary rounded-full mb-[-1px]" />
+        </div>
+
+        {/* Card skeletons */}
+        <div className="space-y-6 w-full pt-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="shadow-sm overflow-hidden">
+              <CardHeader className="flex flex-col items-start gap-2">
+                <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-6 px-4 md:px-6 py-5">
+                {/* Staggered animation for content */}
+                <div
+                  className="space-y-4"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                >
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+                      style={{ animationDelay: `${i * 50}ms` }}
+                    />
+                    <div
+                      className="h-6 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+                      style={{ animationDelay: `${i * 75}ms` }}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className="h-4 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+                      style={{ animationDelay: `${i * 100}ms` }}
+                    />
+                    <div
+                      className="h-6 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+                      style={{ animationDelay: `${i * 125}ms` }}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+
+        {/* Add global styles for better animations */}
+        <style jsx global>{`
+          @keyframes pulseDelay {
+            0%,
+            100% {
+              opacity: 0.5;
+            }
+            50% {
+              opacity: 1;
+            }
+          }
+          .animate-pulse {
+            animation: pulseDelay 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          }
+        `}</style>
       </div>
     );
   }
 
+  // Enhanced Settings Page with better responsiveness
   return (
-    <div className="p-4 pb-16 space-y-6 w-full max-w-4xl mx-auto min-w-[320px]">
+    <div className="p-4 md:p-6 pb-16 space-y-6 w-full max-w-5xl mx-auto min-w-[320px] animate-fadeIn">
       <PageTitle title="Settings" />
 
+      {/* Enhanced tabs with better mobile appearance */}
       <Tabs
         selectedKey={activeTab}
         onSelectionChange={(key) => setActiveTab(key as string)}
@@ -341,8 +407,10 @@ export default function SettingsPage() {
         color="primary"
         variant="underlined"
         classNames={{
-          tabList: "gap-6 w-full",
-          panel: "w-full",
+          tabList: "gap-4 w-full relative overflow-x-auto scrollbar-hide",
+          panel: "w-full pt-3",
+          cursor: "w-full",
+          tab: "max-w-fit px-3 h-10 data-[selected=true]:font-medium",
           base: "w-full",
         }}
         className="w-full"
@@ -351,7 +419,7 @@ export default function SettingsPage() {
           key="account"
           title={
             <div className="flex items-center gap-2">
-              <User size={18} />
+              <User size={16} />
               <span>Account</span>
             </div>
           }
@@ -360,7 +428,7 @@ export default function SettingsPage() {
           key="preferences"
           title={
             <div className="flex items-center gap-2">
-              <Settings size={18} />
+              <Settings size={16} />
               <span>Preferences</span>
             </div>
           }
@@ -370,30 +438,34 @@ export default function SettingsPage() {
       {/* Account Settings */}
       {activeTab === "account" && (
         <div className="space-y-6 w-full">
-          <Card>
+          {/* Profile Information Card */}
+          <Card className="shadow-sm hover:shadow transition-shadow">
             <CardHeader className="flex flex-col items-start">
               <h3 className="text-lg font-bold">Profile Information</h3>
             </CardHeader>
             <Divider />
-            <CardBody className="space-y-6">
-              <div>
-                <p className="text-sm text-gray-500">Email Address</p>
-                <p className="font-medium">{userProfile?.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Account Created</p>
-                <p className="font-medium">
-                  {userProfile?.created_at
-                    ? new Date(userProfile.created_at).toLocaleDateString()
-                    : "N/A"}
-                </p>
+            <CardBody className="space-y-6 px-4 md:px-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-500">Email Address</p>
+                  <p className="font-medium">{userProfile?.email}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-500">Account Created</p>
+                  <p className="font-medium">
+                    {userProfile?.created_at
+                      ? new Date(userProfile.created_at).toLocaleDateString()
+                      : "N/A"}
+                  </p>
+                </div>
               </div>
               <div className="flex justify-end">
                 <Button
                   color="danger"
                   variant="light"
-                  startContent={<LogOut size={18} />}
+                  startContent={<LogOut size={16} />}
                   onPress={signOut}
+                  className="h-10"
                 >
                   Sign Out
                 </Button>
@@ -401,25 +473,30 @@ export default function SettingsPage() {
             </CardBody>
           </Card>
 
-          <Card>
+          {/* Update Email Card */}
+          <Card className="shadow-sm hover:shadow transition-shadow">
             <CardHeader className="flex flex-col items-start">
               <h3 className="text-lg font-bold">Update Email</h3>
             </CardHeader>
             <Divider />
-            <CardBody className="space-y-4">
+            <CardBody className="space-y-5 px-4 md:px-6">
               <Input
                 label="New Email Address"
                 placeholder="Enter your new email address"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                startContent={<Mail size={18} className="text-default-400" />}
+                startContent={<Mail size={16} className="text-default-400" />}
+                classNames={{
+                  inputWrapper: "h-12",
+                }}
               />
               <div className="flex justify-end">
                 <Button
                   color="primary"
                   isLoading={isSaving}
-                  startContent={<Save size={18} />}
+                  startContent={<Save size={16} />}
                   onPress={updateEmail}
+                  className="h-10 w-full sm:w-auto"
                 >
                   Update Email
                 </Button>
@@ -427,40 +504,53 @@ export default function SettingsPage() {
             </CardBody>
           </Card>
 
-          <Card>
+          {/* Change Password Card - Enhanced for better spacing */}
+          <Card className="shadow-sm hover:shadow transition-shadow">
             <CardHeader className="flex flex-col items-start">
               <h3 className="text-lg font-bold">Change Password</h3>
             </CardHeader>
             <Divider />
-            <CardBody className="space-y-4">
+            <CardBody className="space-y-5 px-4 md:px-6">
               <Input
                 label="Current Password"
                 placeholder="Enter your current password"
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                startContent={<Key size={18} className="text-default-400" />}
+                startContent={<Key size={16} className="text-default-400" />}
+                classNames={{
+                  inputWrapper: "h-12",
+                }}
               />
-              <Input
-                label="New Password"
-                placeholder="Enter your new password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-              <Input
-                label="Confirm New Password"
-                placeholder="Confirm your new password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="New Password"
+                  placeholder="Enter your new password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  classNames={{
+                    inputWrapper: "h-12",
+                  }}
+                />
+                <Input
+                  label="Confirm New Password"
+                  placeholder="Confirm your new password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  classNames={{
+                    inputWrapper: "h-12",
+                  }}
+                />
+              </div>
               <div className="flex justify-end">
                 <Button
                   color="primary"
                   isLoading={isSaving}
-                  startContent={<Save size={18} />}
+                  startContent={<Save size={16} />}
                   onPress={updatePassword}
+                  className="h-10 w-full sm:w-auto"
                 >
                   Update Password
                 </Button>
@@ -468,7 +558,8 @@ export default function SettingsPage() {
             </CardBody>
           </Card>
 
-          <Card className="border-danger-300">
+          {/* Delete Account Card with improved danger styling */}
+          <Card className="shadow-sm hover:shadow-md border border-danger-200 transition-all">
             <CardHeader className="flex flex-col items-start">
               <div className="flex items-center gap-2 text-danger">
                 <AlertTriangle size={18} />
@@ -480,76 +571,44 @@ export default function SettingsPage() {
               </p>
             </CardHeader>
             <Divider />
-            <CardBody className="space-y-4">
+            <CardBody className="space-y-5 px-4 md:px-6">
               <Input
                 label="Confirm by typing your email"
                 placeholder="Enter your email to confirm"
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
                 color="danger"
-                startContent={<Trash2 size={18} className="text-danger" />}
+                startContent={<Trash2 size={16} className="text-danger" />}
+                classNames={{
+                  inputWrapper: "h-12",
+                }}
               />
               <div className="flex justify-end">
                 <Button
                   color="danger"
                   onPress={onOpen}
                   isDisabled={deleteConfirm !== userProfile?.email}
+                  className="h-10 w-full sm:w-auto"
                 >
                   Delete My Account
                 </Button>
               </div>
             </CardBody>
           </Card>
-
-          {/* Delete Account Confirmation Modal */}
-          <Modal isOpen={isOpen} onClose={onClose}>
-            <ModalContent>
-              {(onClose) => (
-                <>
-                  <ModalHeader className="flex flex-col gap-1">
-                    Confirm Account Deletion
-                  </ModalHeader>
-                  <ModalBody>
-                    <p>
-                      Are you sure you want to permanently delete your account?
-                      This action cannot be undone.
-                    </p>
-                    <p className="text-danger font-medium">
-                      All your workout history, exercises, and preferences will
-                      be lost.
-                    </p>
-                  </ModalBody>
-                  <ModalFooter>
-                    <Button color="default" variant="flat" onPress={onClose}>
-                      Cancel
-                    </Button>
-                    <Button
-                      color="danger"
-                      onPress={() => {
-                        deleteAccount();
-                        onClose();
-                      }}
-                    >
-                      Confirm Delete
-                    </Button>
-                  </ModalFooter>
-                </>
-              )}
-            </ModalContent>
-          </Modal>
         </div>
       )}
 
-      {/* Preferences */}
+      {/* Preferences - Enhanced for better mobile and desktop experience */}
       {activeTab === "preferences" && (
         <div className="space-y-6 w-full">
-          <Card>
+          {/* Display Preferences Card */}
+          <Card className="shadow-sm hover:shadow transition-shadow">
             <CardHeader className="flex flex-col items-start">
               <h3 className="text-lg font-bold">Display Preferences</h3>
             </CardHeader>
             <Divider />
-            <CardBody className="space-y-6">
-              <div className="flex justify-between items-center">
+            <CardBody className="space-y-8 px-4 md:px-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="space-y-1">
                   <p className="font-medium">Weight Units</p>
                   <p className="text-sm text-gray-500">
@@ -572,10 +631,11 @@ export default function SettingsPage() {
                       <Weight className={className} size={14} />
                     )
                   }
+                  className="self-start sm:self-center"
                 />
               </div>
 
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="space-y-1">
                   <p className="font-medium">Theme</p>
                   <p className="text-sm text-gray-500">
@@ -607,18 +667,20 @@ export default function SettingsPage() {
                       }
                     );
                   }}
+                  className="self-start sm:self-center"
                 />
               </div>
             </CardBody>
           </Card>
 
-          <Card>
+          {/* Workout Preferences Card */}
+          <Card className="shadow-sm hover:shadow transition-shadow">
             <CardHeader className="flex flex-col items-start">
               <h3 className="text-lg font-bold">Workout Preferences</h3>
             </CardHeader>
             <Divider />
-            <CardBody className="space-y-6">
-              <div className="flex justify-between items-center">
+            <CardBody className="space-y-8 px-4 md:px-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="space-y-1">
                   <p className="font-medium">Notifications</p>
                   <p className="text-sm text-gray-500">
@@ -638,10 +700,11 @@ export default function SettingsPage() {
                   thumbIcon={({ isSelected, className }) => (
                     <Bell className={className} size={14} />
                   )}
+                  className="self-start sm:self-center"
                 />
               </div>
 
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="space-y-1">
                   <p className="font-medium">Sound Effects</p>
                   <p className="text-sm text-gray-500">
@@ -655,6 +718,7 @@ export default function SettingsPage() {
                   onValueChange={(isSelected) =>
                     setPreferences({ ...preferences, enableSounds: isSelected })
                   }
+                  className="self-start sm:self-center"
                 />
               </div>
 
@@ -673,8 +737,13 @@ export default function SettingsPage() {
                     })
                   }
                   startContent={
-                    <Clock size={18} className="text-default-400" />
+                    <Clock size={16} className="text-default-400" />
                   }
+                  classNames={{
+                    trigger: "h-12",
+                    value: "text-base",
+                  }}
+                  className="max-w-md"
                 >
                   <SelectItem key="30" value="30">
                     30 seconds
@@ -699,18 +768,45 @@ export default function SettingsPage() {
             </CardBody>
           </Card>
 
-          <div className="flex justify-end">
+          {/* Save Button - Better positioning for mobile */}
+          <div className="flex justify-end sticky bottom-4 pt-2">
             <Button
               color="primary"
               isLoading={isSaving}
               onPress={savePreferences}
-              startContent={<Save size={18} />}
+              startContent={<Save size={16} />}
+              className="w-full sm:w-auto h-12 shadow-md"
+              size="lg"
             >
               Save Preferences
             </Button>
           </div>
         </div>
       )}
+
+      {/* Add global styles for animations and mobile optimizations */}
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }
