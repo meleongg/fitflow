@@ -2,7 +2,8 @@ import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 
 export function useUnitPreference() {
-  const [useMetric, setUseMetric] = useState(true); // Default to metric
+  const [useMetric, setUseMetric] = useState(true);
+  const [defaultRestTimer, setDefaultRestTimer] = useState(60); // Add this
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
 
@@ -17,12 +18,14 @@ export function useUnitPreference() {
       if (user) {
         const { data } = await supabase
           .from("user_preferences")
-          .select("use_metric")
+          .select("use_metric, default_rest_timer") // Get both preferences
           .eq("user_id", user.id)
           .single();
 
         if (data) {
           setUseMetric(data.use_metric);
+          // Use the rest timer or default to 60 seconds
+          setDefaultRestTimer(data.default_rest_timer || 60);
         }
       }
 
@@ -32,5 +35,5 @@ export function useUnitPreference() {
     fetchPreferences();
   }, []);
 
-  return { useMetric, isLoading };
+  return { useMetric, defaultRestTimer, isLoading }; // Return the new value
 }

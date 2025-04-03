@@ -89,29 +89,6 @@ const getWorkoutHistory = async (supabase: any, workoutId: string) => {
   return sessions || [];
 };
 
-// Calculate more accurate workout duration based on exercises and sets
-const calculateWorkoutDuration = (exercises: any[]): number => {
-  if (!exercises || exercises.length === 0) return 0;
-
-  // Calculate total sets across all exercises
-  const totalSets = exercises.reduce((total, exercise) => {
-    // Default to 1 set if sets is missing or invalid
-    const setCount = Number(exercise.sets) || 1;
-    return total + setCount;
-  }, 0);
-
-  // Time calculations (in minutes):
-  // - Average of 45 seconds per set (includes exercise time)
-  // - 30 seconds transition between different exercises
-  // - 1 minute initial setup time
-  const setTime = totalSets * 0.75;
-  const transitionTime = (exercises.length - 1) * 0.5;
-  const setupTime = 1;
-
-  // Total estimated time rounded up to nearest minute
-  return Math.max(1, Math.ceil(setTime + transitionTime + setupTime));
-};
-
 export default function ViewWorkout() {
   const router = useRouter();
   const params = useParams();
@@ -123,7 +100,7 @@ export default function ViewWorkout() {
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
   const { activeSession } = useSession();
-  const { useMetric } = useUnitPreference();
+  const { useMetric, defaultRestTimer } = useUnitPreference();
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   const [selectedTab, setSelectedTab] = useState("exercises");
   const hasShownLoadToast = useRef(false);
@@ -158,6 +135,35 @@ export default function ViewWorkout() {
 
     fetchData();
   }, [workoutId]);
+
+  // Calculate more accurate workout duration based on exercises and sets
+  const calculateWorkoutDuration = (exercises: any[]): number => {
+    if (!exercises || exercises.length === 0) return 0;
+
+    // Calculate total sets across all exercises
+    const totalSets = exercises.reduce((total, exercise) => {
+      // Default to 1 set if sets is missing or invalid
+      const setCount = Number(exercise.sets) || 1;
+      return total + setCount;
+    }, 0);
+
+    // Time calculations (in minutes):
+    // - Average of 45 seconds per set (includes exercise time)
+    // - 30 seconds transition between different exercises
+    // - 1 minute initial setup time
+    const setTime = totalSets * 0.75;
+    const transitionTime = (exercises.length - 1) * 0.5;
+    const setupTime = 1;
+    // Rest time in minutes (convert from seconds)
+    const restMinutes = defaultRestTimer / 60;
+    const totalRestTime = (totalSets - exercises.length) * restMinutes;
+
+    // Total estimated time rounded up to nearest minute
+    return Math.max(
+      1,
+      Math.ceil(setTime + transitionTime + totalRestTime + setupTime)
+    );
+  };
 
   // Group exercises by category for better organization
   const exercisesByCategory = workoutExercises.reduce((acc, item) => {
