@@ -36,6 +36,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+// Import the utility functions at the top of your file
+import { convertToStorageUnit } from "@/utils/units";
+
 interface Exercise {
   id: string;
   name: string;
@@ -421,15 +424,23 @@ const CreateWorkoutPage = () => {
       const workoutId = newWorkout.id;
 
       // Create associated WorkoutExercise entries
-      const workoutExerciseEntries = workoutExercises.map((exercise) => ({
-        user_id: user.id,
-        workout_id: workoutId,
-        exercise_id: exercise.id,
-        sets: exercise.sets || 0, // Add null check
-        reps: exercise.reps || 0,
-        weight: exercise.weight || 0,
-        exercise_order: exercise.exercise_order,
-      }));
+      const workoutExerciseEntries = workoutExercises.map((exercise) => {
+        // Get the raw weight value
+        const rawWeight = Number(exercise.weight) || 0;
+
+        // Convert to storage unit (kg) using your utility function
+        const convertedWeight = convertToStorageUnit(rawWeight, useMetric);
+
+        return {
+          user_id: user.id,
+          workout_id: workoutId,
+          exercise_id: exercise.id,
+          sets: Number(exercise.sets) || 0,
+          reps: Number(exercise.reps) || 0,
+          weight: convertedWeight, // Store the properly converted weight
+          exercise_order: exercise.exercise_order,
+        };
+      });
 
       const { error: exercisesError } = await supabase
         .from("workout_exercises")
