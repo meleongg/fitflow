@@ -26,6 +26,7 @@ import {
 import {
   AlertTriangle,
   Bell,
+  Check,
   Clock,
   Key,
   LogOut,
@@ -129,6 +130,9 @@ export default function SettingsPage() {
     try {
       setIsSaving(true);
 
+      // Show loading toast that will be updated with result
+      const toastId = toast.loading("Saving your preferences...");
+
       // Apply theme change globally
       setTheme(preferences.useDarkMode ? "dark" : "light");
 
@@ -145,10 +149,16 @@ export default function SettingsPage() {
 
       if (error) throw error;
 
-      toast.success("Preferences saved successfully");
+      // Update the loading toast to success
+      toast.success("Your preferences have been saved", {
+        id: toastId,
+        icon: <Check className="h-4 w-4" />,
+      });
     } catch (error) {
       console.error("Error saving preferences:", error);
-      toast.error("Failed to save preferences");
+      toast.error("Could not save preferences. Please try again.", {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -164,15 +174,25 @@ export default function SettingsPage() {
         return;
       }
 
+      // Loading toast that will be updated
+      const toastId = toast.loading("Sending verification email...");
+
       const { error } = await supabase.auth.updateUser({ email: newEmail });
 
       if (error) throw error;
 
-      toast.success("Verification email sent. Please check your inbox.");
+      toast.success("Verification email sent", {
+        id: toastId,
+        description: "Please check your inbox to complete the change",
+        duration: 5000,
+      });
+
       setNewEmail("");
     } catch (error: any) {
       console.error("Error updating email:", error);
-      toast.error(error.message || "Failed to update email");
+      toast.error("Failed to update email", {
+        description: error.message || "Please try again later",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -194,9 +214,17 @@ export default function SettingsPage() {
       }
 
       if (newPassword !== confirmPassword) {
-        toast.error("Passwords don't match");
+        toast.error("New passwords don't match");
         return;
       }
+
+      if (newPassword.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return;
+      }
+
+      // Loading toast
+      const toastId = toast.loading("Verifying your password...");
 
       // First verify the current password
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -205,9 +233,12 @@ export default function SettingsPage() {
       });
 
       if (signInError) {
-        toast.error("Current password is incorrect");
+        toast.error("Current password is incorrect", { id: toastId });
         return;
       }
+
+      // Update loading message
+      toast.loading("Updating your password...", { id: toastId });
 
       // Then update the password
       const { error } = await supabase.auth.updateUser({
@@ -216,13 +247,19 @@ export default function SettingsPage() {
 
       if (error) throw error;
 
-      toast.success("Password updated successfully");
+      toast.success("Password updated successfully", {
+        id: toastId,
+        icon: <Check className="h-4 w-4" />,
+      });
+
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
       console.error("Error updating password:", error);
-      toast.error(error.message || "Failed to update password");
+      toast.error("Failed to update password", {
+        description: error.message || "Please try again later",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -232,11 +269,13 @@ export default function SettingsPage() {
   const deleteAccount = async () => {
     try {
       if (deleteConfirm !== userProfile.email) {
-        toast.error("Email confirmation doesn't match");
+        toast.error("Email confirmation doesn't match your account email");
         return;
       }
 
-      // Delete user data first (you might want to handle this differently)
+      const toastId = toast.loading("Deleting your account...");
+
+      // Delete user data first
       await supabase
         .from("user_preferences")
         .delete()
@@ -249,22 +288,37 @@ export default function SettingsPage() {
 
       // Sign out after deletion
       await supabase.auth.signOut();
-      toast.success("Account deleted successfully");
+
+      toast.success("Account deleted successfully", {
+        id: toastId,
+        description: "We're sorry to see you go",
+      });
+
       router.push("/sign-in");
     } catch (error: any) {
       console.error("Error deleting account:", error);
-      toast.error(error.message || "Failed to delete account");
+      toast.error("Failed to delete account", {
+        description: error.message || "Please contact support if this persists",
+      });
     }
   };
 
   // Sign out
   const signOut = async () => {
     try {
+      const toastId = toast.loading("Signing you out...");
+
       await supabase.auth.signOut();
+
+      toast.success("Signed out successfully", {
+        id: toastId,
+        duration: 3000,
+      });
+
       router.push("/sign-in");
     } catch (error) {
       console.error("Error signing out:", error);
-      toast.error("Failed to sign out");
+      toast.error("Failed to sign out. Please try again.");
     }
   };
 
@@ -539,6 +593,19 @@ export default function SettingsPage() {
                     setTheme(isSelected ? "dark" : "light");
                     // Then update preferences state
                     setPreferences({ ...preferences, useDarkMode: isSelected });
+
+                    // Add a subtle toast notification
+                    toast.success(
+                      `${isSelected ? "Dark" : "Light"} theme activated`,
+                      {
+                        duration: 2000,
+                        icon: isSelected ? (
+                          <Moon size={16} />
+                        ) : (
+                          <Sun size={16} />
+                        ),
+                      }
+                    );
                   }}
                 />
               </div>
