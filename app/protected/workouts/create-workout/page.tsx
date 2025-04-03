@@ -448,13 +448,11 @@ const CreateWorkoutPage = () => {
 
       setWorkoutExercises([]); // Clear exercises after submission
 
-      // Set the flag before resetting
-      setIsProgrammaticReset(true);
-      if (formRef.current) {
-        formRef.current.reset();
-      } else {
-        // Fallback if ref isn't available
-        setErrors({});
+      const formElement = formRef.current;
+      if (formElement) {
+        // Set a custom attribute to indicate programmatic reset
+        formElement.setAttribute("data-programmatic-reset", "true");
+        formElement.reset();
       }
 
       // Use Next.js router instead of window.location
@@ -513,7 +511,7 @@ const CreateWorkoutPage = () => {
         className="w-full max-w-full justify-center items-center space-y-4"
         validationBehavior="native"
         validationErrors={errors}
-        onReset={() => {
+        onReset={(e) => {
           // Clear errors
           setErrors({});
 
@@ -523,13 +521,17 @@ const CreateWorkoutPage = () => {
           // Reset selected category if needed
           setSelectedCategory(undefined);
 
+          // Check the custom attribute instead of state
+          const isProgrammatic =
+            e.currentTarget.getAttribute("data-programmatic-reset") === "true";
+
           // Only show toast if it's a manual reset (not from submission)
-          if (!isProgrammaticReset) {
+          if (!isProgrammatic) {
             toast.info("Form has been reset");
           }
 
-          // Reset the flag
-          setIsProgrammaticReset(false);
+          // Remove the attribute
+          e.currentTarget.removeAttribute("data-programmatic-reset");
         }}
         onSubmit={onWorkoutSubmit}
       >
