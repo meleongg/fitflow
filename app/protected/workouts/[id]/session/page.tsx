@@ -624,15 +624,13 @@ export default function WorkoutSession() {
     );
   }
 
-  // Replace the current loading state with this enhanced skeleton
+  // Replace your current loading skeleton section with this updated version:
 
   if (isLoading) {
     return (
       <div className="w-full max-w-full overflow-x-hidden px-4 animate-fade-in">
         <div className="flex items-center justify-between">
           <Skeleton className="h-10 w-48 rounded-lg" /> {/* Page title */}
-          <Skeleton className="h-10 w-20 rounded-lg" />{" "}
-          {/* Timer placeholder */}
         </div>
 
         <div className="flex items-center mt-4">
@@ -642,7 +640,20 @@ export default function WorkoutSession() {
         {/* Workout heading skeleton */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 my-6">
           <Skeleton className="h-8 w-64 rounded-lg" /> {/* Workout title */}
-          <Skeleton className="h-10 w-24 rounded-lg" /> {/* Timer */}
+          <div className="flex gap-2 items-center">
+            <Skeleton className="h-6 w-32 rounded-full" /> {/* Set stats */}
+          </div>
+        </div>
+
+        {/* Progress indicator skeleton */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <Skeleton className="h-4 w-28 rounded-md" /> {/* Progress label */}
+            <Skeleton className="h-4 w-12 rounded-md" />{" "}
+            {/* Progress percentage */}
+          </div>
+          <Skeleton className="h-2.5 w-full rounded-full" />{" "}
+          {/* Progress bar */}
         </div>
 
         {/* Workout description card skeleton */}
@@ -651,7 +662,14 @@ export default function WorkoutSession() {
           {/* Description label */}
           <Skeleton className="h-16 w-full rounded-lg" />{" "}
           {/* Description text */}
-          <Skeleton className="h-4 w-40 mt-2 rounded-lg" /> {/* Started time */}
+          <div className="flex justify-between items-center mt-4">
+            <Skeleton className="h-4 w-48 rounded-md" /> {/* Session started */}
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4 rounded-full" /> {/* Clock icon */}
+              <Skeleton className="h-4 w-16 rounded-md" />{" "}
+              {/* Session duration */}
+            </div>
+          </div>
         </div>
 
         {/* Exercise cards skeletons */}
@@ -669,10 +687,15 @@ export default function WorkoutSession() {
                 </div>
                 <Skeleton className="h-7 w-48 rounded-lg" />{" "}
                 {/* Exercise name */}
+                {/* Progress indicator */}
+                <div className="ml-2 flex items-center gap-2">
+                  <Skeleton className="h-1.5 w-16 rounded-full" />
+                  <Skeleton className="h-4 w-10 rounded-md" />
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <Skeleton className="h-5 w-40 rounded-lg" />{" "}
+                <Skeleton className="h-5 w-40 rounded-md" />{" "}
                 {/* Target sets/reps */}
                 <Skeleton className="h-9 w-24 rounded-lg" />{" "}
                 {/* Remove button */}
@@ -717,13 +740,22 @@ export default function WorkoutSession() {
 
         {/* Action buttons skeleton */}
         <div className="flex flex-col sm:flex-row gap-3 mt-4">
-          <Skeleton className="h-10 w-full sm:w-40 rounded-lg" />
-          <Skeleton className="h-10 w-full sm:w-48 rounded-lg" />
+          <Skeleton className="h-10 w-full sm:w-40 rounded-lg" />{" "}
+          {/* Add Exercise */}
+          <Skeleton className="h-10 w-full sm:w-48 rounded-lg" />{" "}
+          {/* Add Custom Exercise */}
         </div>
 
-        <div className="mt-8 flex flex-col sm:flex-row gap-3 mb-16">
-          <Skeleton className="h-12 w-full rounded-lg" />
-          <Skeleton className="h-12 w-full rounded-lg" />
+        {/* Bottom sticky actions */}
+        <div className="mt-8 mb-16">
+          <div className="w-full bg-background/80 backdrop-blur-md p-4 rounded-lg shadow-lg border">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Skeleton className="h-12 w-full rounded-lg" />{" "}
+              {/* Complete button */}
+              <Skeleton className="h-12 w-full rounded-lg" />{" "}
+              {/* Cancel button */}
+            </div>
+          </div>
         </div>
       </div>
     );
