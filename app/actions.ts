@@ -38,9 +38,7 @@ export const signUpAction = async (formData: FormData) => {
         user_id: data.user.id,
         use_metric: false, // false = lbs (imperial units)
         use_dark_mode: false, // light mode default
-        enable_notifications: false,
         default_rest_timer: 60, // 60 seconds
-        enable_sounds: false,
       });
 
     if (prefsError) {

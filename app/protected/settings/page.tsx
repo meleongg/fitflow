@@ -19,7 +19,6 @@ import {
 } from "@nextui-org/react";
 import {
   AlertTriangle,
-  Bell,
   Check,
   Clock,
   Key,
@@ -39,11 +38,9 @@ import { toast } from "sonner";
 
 // Default user preferences
 const DEFAULT_PREFERENCES = {
-  useMetric: true, // kg by default
+  useMetric: true,
   useDarkMode: false,
-  enableNotifications: true,
   defaultRestTimer: 60, // seconds
-  enableSounds: true,
 };
 
 export default function SettingsPage() {
@@ -92,9 +89,7 @@ export default function SettingsPage() {
         setPreferences({
           useMetric: prefsData.use_metric,
           useDarkMode: theme === "dark", // Match the current theme
-          enableNotifications: prefsData.enable_notifications,
           defaultRestTimer: prefsData.default_rest_timer,
-          enableSounds: prefsData.enable_sounds,
         });
       } else {
         // Create default preferences if none exists
@@ -102,9 +97,7 @@ export default function SettingsPage() {
           user_id: user.id,
           use_metric: DEFAULT_PREFERENCES.useMetric,
           use_dark_mode: DEFAULT_PREFERENCES.useDarkMode,
-          enable_notifications: DEFAULT_PREFERENCES.enableNotifications,
           default_rest_timer: DEFAULT_PREFERENCES.defaultRestTimer,
-          enable_sounds: DEFAULT_PREFERENCES.enableSounds,
         });
       }
     } catch (error) {
@@ -135,9 +128,7 @@ export default function SettingsPage() {
         .update({
           use_metric: preferences.useMetric,
           use_dark_mode: preferences.useDarkMode,
-          enable_notifications: preferences.enableNotifications,
           default_rest_timer: preferences.defaultRestTimer,
-          enable_sounds: preferences.enableSounds,
         })
         .eq("user_id", userProfile.id);
 
@@ -680,52 +671,11 @@ export default function SettingsPage() {
             </CardHeader>
             <Divider />
             <CardBody className="space-y-8 px-4 md:px-6">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <div className="space-y-1">
-                  <p className="font-medium">Notifications</p>
-                  <p className="text-sm text-gray-500">
-                    Enable notifications for workouts and reminders
-                  </p>
-                </div>
-                <Switch
-                  size="lg"
-                  color="primary"
-                  isSelected={preferences.enableNotifications}
-                  onValueChange={(isSelected) =>
-                    setPreferences({
-                      ...preferences,
-                      enableNotifications: isSelected,
-                    })
-                  }
-                  thumbIcon={({ isSelected, className }) => (
-                    <Bell className={className} size={14} />
-                  )}
-                  className="self-start sm:self-center"
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <div className="space-y-1">
-                  <p className="font-medium">Sound Effects</p>
-                  <p className="text-sm text-gray-500">
-                    Enable sounds for timers and actions
-                  </p>
-                </div>
-                <Switch
-                  size="lg"
-                  color="primary"
-                  isSelected={preferences.enableSounds}
-                  onValueChange={(isSelected) =>
-                    setPreferences({ ...preferences, enableSounds: isSelected })
-                  }
-                  className="self-start sm:self-center"
-                />
-              </div>
-
               <div className="flex flex-col space-y-2">
-                <p className="font-medium">Default Rest Timer</p>
+                <p className="font-medium">Workout Time Estimation</p>
                 <p className="text-sm text-gray-500 mb-2">
-                  Set the default duration for rest intervals
+                  Set your typical rest duration between sets. This helps
+                  calculate more accurate workout time estimates.
                 </p>
                 <Select
                   label="Rest Duration"
