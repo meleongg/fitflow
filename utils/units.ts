@@ -35,5 +35,10 @@ export const convertFromStorageUnit = (
 export const displayWeight = (weight: number, useMetric: boolean): string => {
   const value = useMetric ? weight : kgToLbs(weight);
   const unit = useMetric ? "kg" : "lbs";
-  return `${value.toFixed(1)} ${unit}`;
+
+  // For volumes, round to whole numbers
+  const isLargeNumber = value >= 100;
+  const decimals = isLargeNumber ? 0 : 1;
+
+  return `${value.toFixed(decimals)} ${unit}`;
 };

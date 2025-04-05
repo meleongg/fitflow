@@ -515,10 +515,7 @@ export default function ViewSession() {
                       </TableCell>
                       <TableCell className="py-2 hidden sm:table-cell">
                         {set.volume > 0
-                          ? (useMetric
-                              ? set.volume
-                              : set.volume * 2.20462
-                            ).toFixed(1)
+                          ? displayWeight(set.volume, useMetric)
                           : "-"}
                       </TableCell>
                     </TableRow>
