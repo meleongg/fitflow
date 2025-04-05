@@ -168,8 +168,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         // Clear known session-related keys
         const keysToRemove = [
           SESSION_STORAGE_KEY,
-          "fitflow-active-session", // Just to be sure
-          "workout-timer-state",
+          "fitflow-active-session",
           "active-session",
           "activeWorkoutSession",
           "workout-session",

@@ -2,7 +2,7 @@
 
 import BackButton from "@/components/ui/back-button";
 import PageTitle from "@/components/ui/page-title";
-import Timer, { TIMER_STORAGE_KEY } from "@/components/ui/timer";
+import SessionDuration from "@/components/ui/session-duration";
 import { useSession } from "@/contexts/SessionContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
@@ -37,6 +37,7 @@ import {
   ArrowUp,
   Check,
   ChevronUp,
+  Clock,
   Dumbbell,
   FileText,
   Plus,
@@ -48,8 +49,6 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-
-const SESSION_STORAGE_KEY = "fitflow-active-session";
 
 // Fetch workout data
 const getWorkoutData = async (supabase: any, workoutId: string) => {
@@ -93,7 +92,6 @@ const getWorkoutExercises = async (supabase: any, workoutId: string) => {
   return transformedExercises;
 };
 
-// 1. First, update your SessionExercise interface (add | null)
 interface SessionExercise {
   id: string;
   name: string;
@@ -102,31 +100,11 @@ interface SessionExercise {
   targetWeight: number;
   actualSets: {
     setNumber: number;
-    reps: number | null; // Allow null for empty state
-    weight: number | null; // Allow null for empty state
+    reps: number | null;
+    weight: number | null;
     completed: boolean;
   }[];
 }
-
-// Format date consistently for both server and client
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-};
 
 export default function WorkoutSession() {
   const params = useParams();
@@ -168,14 +146,12 @@ export default function WorkoutSession() {
   const [user, setUser] = useState<any>(null);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Add this near your other hooks
   const { useMetric, isLoading: loadingPreferences } = useUnitPreference();
 
   // Add these state variables with your other state declarations
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
-  // 1. Add custom exercise error state
   const [customExerciseError, setCustomExerciseError] = useState<string | null>(
     null
   );
@@ -600,8 +576,6 @@ export default function WorkoutSession() {
         toast.error(`Error saving offline: ${error.message}`);
       }
     }
-
-    localStorage.removeItem(TIMER_STORAGE_KEY);
   };
 
   // Add this function with the other handlers
@@ -801,7 +775,7 @@ export default function WorkoutSession() {
               )}{" "}
               sets
             </div>
-            <Timer />
+            <SessionDuration />
           </div>
         </div>
       </div>
@@ -889,10 +863,17 @@ export default function WorkoutSession() {
           <div className="bg-default-50 dark:bg-default-100 p-4 rounded-lg mb-6 border border-default-200">
             <h3 className="font-semibold mb-2">Description</h3>
             <p>{workout.description || "No description provided."}</p>
-            <p className="text-sm text-gray-500 mt-2" suppressHydrationWarning>
-              Session started:{" "}
-              {new Date(sessionStartTime || "").toLocaleString()}
-            </p>
+
+            <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
+              <div>
+                Session started:{" "}
+                {new Date(sessionStartTime || "").toLocaleString()}
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <SessionDuration />
+              </div>
+            </div>
           </div>
 
           {!isOnline && (
