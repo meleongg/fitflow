@@ -2356,6 +2356,75 @@ export default function WorkoutSession() {
           )}
         </ModalContent>
       </Modal>
+
+      {/* Cancel Workout Confirmation Modal */}
+      <Modal
+        isOpen={isCancelConfirmOpen}
+        onClose={onCancelConfirmClose}
+        backdrop="opaque"
+        placement="center"
+        size="sm"
+        classNames={{
+          base: "max-w-[95%] sm:max-w-md mx-auto",
+          header: "pb-0",
+          body: "px-6 py-5",
+          footer: "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-2",
+          closeButton: "top-3 right-3",
+        }}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 border-b border-default-200 pb-3">
+                <h3 className="text-lg font-bold">Cancel Workout</h3>
+              </ModalHeader>
+              <ModalBody>
+                <div className="space-y-3">
+                  <p>Are you sure you want to cancel this workout session?</p>
+                  <p className="text-danger">
+                    This action cannot be undone, and your progress will be
+                    lost.
+                  </p>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  variant="light"
+                  fullWidth
+                  onPress={onCancelConfirmClose}
+                >
+                  Keep Working Out
+                </Button>
+                <Button
+                  color="danger"
+                  fullWidth
+                  onPress={() => {
+                    // End the session
+                    endSession();
+
+                    // Clear any local storage data
+                    if (typeof window !== "undefined") {
+                      localStorage.removeItem("fitflow-active-session");
+                      localStorage.removeItem("workout-timer-state");
+
+                      // Dispatch events to notify components
+                      window.dispatchEvent(new Event("storage"));
+                      window.dispatchEvent(new CustomEvent("session-ended"));
+                    }
+
+                    toast.info("Workout session canceled");
+
+                    // Navigate back to workouts page with a full page reload
+                    window.location.href = `/protected/workouts?ts=${Date.now()}`;
+                  }}
+                >
+                  Yes, Cancel Workout
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
