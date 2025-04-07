@@ -6,7 +6,6 @@ import SessionDuration from "@/components/ui/session-duration";
 import { useSession } from "@/contexts/SessionContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
-import { db, OfflineWorkoutSession } from "@/utils/indexedDB";
 import { createClient } from "@/utils/supabase/client";
 import { displayWeight, kgToLbs, lbsToKg } from "@/utils/units";
 import {
@@ -123,6 +122,20 @@ export default function WorkoutSession() {
   const [selectedCategory, setSelectedCategory] = useState<number>();
 
   const [submitted, setSubmitted] = useState<any>(null);
+  // Add your new state variables here, before any useEffects or other logic
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUpdateWorkoutModal, setShowUpdateWorkoutModal] = useState(false);
+  const [workoutUpdates, setWorkoutUpdates] = useState<{
+    [exerciseId: string]: {
+      sets: number;
+      reps: number;
+      weight: number;
+      selected: boolean;
+      isPR: boolean;
+      manuallyEdited: boolean;
+    };
+  }>({});
+
   const PAGE_SIZE = 5;
 
   const {
@@ -475,106 +488,177 @@ export default function WorkoutSession() {
     }
   };
 
+  // Modify the onSessionSubmit function to prepare workout updates
   const onSessionSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const endTime = new Date().toISOString();
 
-    // End the global session
-    endSession();
+    // Prepare updates based on session performance
+    const updates: {
+      [exerciseId: string]: {
+        sets: number;
+        reps: number;
+        weight: number;
+        selected: boolean;
+        isPR: boolean;
+        manuallyEdited: boolean;
+      };
+    } = {};
 
-    if (isOnline) {
-      setSubmitted(true);
-      try {
-        // Add loading toast
-        const toastId = toast.loading("Saving workout session...");
+    // Track if we have any updates to suggest
+    let hasUpdatesToSuggest = false;
 
-        if (!user) {
-          toast.dismiss(toastId);
-          toast.error("Not authenticated. Please sign in again.");
-          throw new Error("Not authenticated");
-        }
+    // Get existing PRs for comparison
+    const { data: existingPRs } = await supabase
+      .from("analytics")
+      .select("exercise_id, max_weight")
+      .eq("user_id", user.id);
 
-        const { data: session, error: sessionError } = await supabase
-          .from("sessions")
-          .insert({
-            user_id: user.id,
-            workout_id: workoutId,
-            started_at: sessionStartTime,
-            ended_at: endTime,
-          })
-          .select()
-          .single();
+    const prMap = new Map();
+    existingPRs?.forEach((pr) => {
+      prMap.set(pr.exercise_id, pr.max_weight);
+    });
 
-        if (sessionError || !session) {
-          toast.dismiss(toastId);
-          toast.error("Failed to save workout session");
-          throw new Error("Failed to create session");
-        }
-
-        const sessionExercisesData = sessionExercises.flatMap((exercise) =>
-          exercise.actualSets
-            .filter((set) => set.completed)
-            .map((set) => ({
-              user_id: user.id,
-              session_id: session.id,
-              exercise_id: exercise.id,
-              set_number: set.setNumber,
-              reps: set.reps ?? 0,
-              weight: set.weight ?? 0,
-            }))
+    // Calculate suggested updates based on session performance
+    sessionExercises.forEach((exercise) => {
+      const completedSets = exercise.actualSets.filter((set) => set.completed);
+      if (completedSets.length > 0) {
+        // Get the best weight and reps from completed sets
+        const bestWeight = Math.max(
+          ...completedSets.map((set) => set.weight || 0)
         );
+        const bestReps = Math.max(...completedSets.map((set) => set.reps || 0));
 
-        const { error: exercisesError } = await supabase
-          .from("session_exercises")
-          .insert(sessionExercisesData);
+        // Check if this is a PR for weight
+        const isPR = bestWeight > (prMap.get(exercise.id) || 0);
 
-        if (exercisesError) {
-          toast.dismiss(toastId);
-          toast.error("Failed to save exercise data");
-          console.error("Exercise insertion error:", exercisesError);
-          throw new Error("Failed to save session exercises");
+        // Determine if we should suggest updates (did they exceed targets?)
+        const shouldUpdate =
+          bestWeight > exercise.targetWeight ||
+          bestReps > exercise.targetReps ||
+          completedSets.length !== exercise.actualSets.length;
+
+        if (shouldUpdate) hasUpdatesToSuggest = true;
+
+        updates[exercise.id] = {
+          sets: completedSets.length,
+          reps: bestReps,
+          weight: bestWeight,
+          selected: shouldUpdate, // Pre-select exercises that exceeded targets
+          isPR,
+          manuallyEdited: false,
+        };
+      }
+    });
+
+    if (hasUpdatesToSuggest) {
+      setWorkoutUpdates(updates);
+      setShowUpdateWorkoutModal(true);
+    } else {
+      // If no updates to suggest, proceed with normal flow
+      await finalizeSession(endTime);
+    }
+  };
+
+  // Add this function to handle the final submission
+  const finalizeSession = async (endTime: string) => {
+    setIsSubmitting(true);
+
+    try {
+      // Your existing session saving code...
+      const sessionData = {
+        // existing session data preparation
+      };
+
+      const { data: session, error } = await supabase
+        .from("sessions")
+        .insert(sessionData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // After successful session submission
+      endSession();
+      toast.success("Session completed!");
+      router.push(`/protected/sessions/${session.id}`);
+    } catch (error: any) {
+      console.error("Error saving session:", error);
+      toast.error("Failed to save session");
+      setIsSubmitting(false);
+    }
+  };
+
+  // Add this function to handle workout updates
+  const handleWorkoutUpdate = async () => {
+    try {
+      const toastId = toast.loading("Updating workout defaults...");
+
+      // Filter selected exercises
+      const selectedUpdates = Object.entries(workoutUpdates)
+        .filter(([_, data]) => data.selected)
+        .map(([exerciseId, data]) => ({
+          exercise_id: exerciseId,
+          workout_id: workoutId,
+          sets: data.sets,
+          reps: data.reps,
+          weight: data.weight,
+          isPR: data.isPR,
+        }));
+
+      if (selectedUpdates.length > 0) {
+        // Update each workout exercise
+        for (const update of selectedUpdates) {
+          // Update workout exercises
+          await supabase
+            .from("workout_exercises")
+            .update({
+              sets: update.sets,
+              reps: update.reps,
+              weight: update.weight,
+            })
+            .eq("workout_id", update.workout_id)
+            .eq("exercise_id", update.exercise_id);
+
+          // If this is a PR, update the analytics table
+          if (update.isPR) {
+            const { error: analyticsError } = await supabase
+              .from("analytics")
+              .upsert(
+                {
+                  user_id: user.id,
+                  exercise_id: update.exercise_id,
+                  max_weight: update.weight,
+                  updated_at: new Date().toISOString(),
+                },
+                {
+                  onConflict: "user_id,exercise_id",
+                }
+              );
+
+            if (analyticsError) {
+              console.error("Error updating analytics:", analyticsError);
+            }
+          }
         }
 
-        // Success toast
         toast.dismiss(toastId);
-        toast.success("Workout completed successfully!");
-
-        router.push(`/protected/sessions/${session.id}`);
-      } catch (error: any) {
-        console.error("Error completing session:", error);
-        toast.error(`Error: ${error.message || "Failed to save workout"}`);
-        setSubmitted(false);
-      }
-    } else {
-      // For offline storage
-      try {
-        const toastId = toast.loading("Saving workout offline...");
-
-        const offlineSession: OfflineWorkoutSession = {
-          workout_id: workoutId,
-          started_at: sessionStartTime!,
-          ended_at: endTime,
-          exercises: sessionExercises.map((exercise) => ({
-            exercise_id: exercise.id,
-            sets: exercise.actualSets.map((set) => ({
-              reps: set.reps ?? 0,
-              weight: set.weight ?? 0,
-              completed: set.completed,
-            })),
-          })),
-          synced: false,
-        };
-
-        await db.saveWorkoutSession(offlineSession);
-
+        toast.success(
+          `Updated ${selectedUpdates.length} exercises in your workout`
+        );
+      } else {
         toast.dismiss(toastId);
-        toast.success("Workout saved offline. Will sync when online.");
-
-        // Navigate back to workout page
-        router.push("/protected/workouts");
-      } catch (error: any) {
-        toast.error(`Error saving offline: ${error.message}`);
+        toast.info("No workout updates selected");
       }
+
+      // Proceed with session finalization
+      await finalizeSession(new Date().toISOString());
+    } catch (error: any) {
+      console.error("Error updating workout:", error);
+      toast.error("Failed to update workout defaults");
+
+      // Still finalize the session even if updates fail
+      await finalizeSession(new Date().toISOString());
     }
   };
 
@@ -763,19 +847,6 @@ export default function WorkoutSession() {
 
   if (error) return <div className="text-red-500">{error}</div>;
   if (!workout) return <div>Workout not found</div>;
-
-  // First, add these state variables to your WorkoutSession component
-  const [showUpdateWorkoutModal, setShowUpdateWorkoutModal] = useState(false);
-  const [workoutUpdates, setWorkoutUpdates] = useState<{
-    [exerciseId: string]: {
-      sets: number;
-      reps: number;
-      weight: number;
-      selected: boolean;
-      isPR: boolean;
-      manuallyEdited: boolean;
-    };
-  }>({});
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4">
@@ -1417,7 +1488,7 @@ export default function WorkoutSession() {
                   size="lg"
                   type="submit"
                   className="w-full"
-                  isLoading={completingWorkout}
+                  isLoading={isSubmitting || completingWorkout}
                   onPress={() => {
                     setCompletingWorkout(true);
                     // Use the ref to access the form
@@ -1426,10 +1497,14 @@ export default function WorkoutSession() {
                     }
                   }}
                   startContent={
-                    !completingWorkout && <Check className="h-5 w-5" />
+                    !(isSubmitting || completingWorkout) && (
+                      <Check className="h-5 w-5" />
+                    )
                   }
                 >
-                  {completingWorkout ? "Saving..." : "Complete Workout"}
+                  {isSubmitting || completingWorkout
+                    ? "Saving..."
+                    : "Complete Workout"}
                 </Button>
 
                 <Button
