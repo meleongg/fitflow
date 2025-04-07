@@ -143,6 +143,10 @@ export default function WorkoutSession() {
       manuallyEdited: boolean;
     };
   }>({});
+  const [showIncompleteExercisesModal, setShowIncompleteExercisesModal] =
+    useState(false);
+  const [incompleteExercisesNames, setIncompleteExercisesNames] =
+    useState<string>("");
 
   const PAGE_SIZE = 5;
 
@@ -499,6 +503,36 @@ export default function WorkoutSession() {
   // Modify the onSessionSubmit function to prepare workout updates
   const onSessionSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Check if any sets are completed
+    const hasCompletedSets = sessionExercises.some((exercise) =>
+      exercise.actualSets.some((set) => set.completed)
+    );
+
+    if (!hasCompletedSets) {
+      toast.error(
+        "Please complete at least one set before finishing the workout"
+      );
+      setCompletingWorkout(false);
+      return;
+    }
+
+    // Check if any exercises have no completed sets at all
+    const incompleteExercises = sessionExercises.filter(
+      (exercise) => !exercise.actualSets.some((set) => set.completed)
+    );
+
+    if (incompleteExercises.length > 0) {
+      const exerciseNames = incompleteExercises.map((e) => e.name).join(", ");
+
+      // Show modal instead of native confirm
+      setIncompleteExercisesNames(exerciseNames);
+      setShowIncompleteExercisesModal(true);
+      setCompletingWorkout(false);
+      return;
+    }
+
+    // Continue with existing code...
     const endTime = new Date().toISOString();
 
     // Prepare updates based on session performance
@@ -573,7 +607,7 @@ export default function WorkoutSession() {
     setIsSubmitting(true);
 
     try {
-      // 1. First create the session record
+      // 1. Create the session record
       const { data: session, error: sessionError } = await supabase
         .from("sessions")
         .insert({
@@ -587,60 +621,66 @@ export default function WorkoutSession() {
 
       if (sessionError) throw sessionError;
 
-      // 2. Then insert all session exercises
+      // 2. Insert session exercises with aggregated set data
       for (const exercise of sessionExercises) {
-        // Insert the session exercise
-        const { data: sessionExercise, error: exerciseError } = await supabase
+        // Only process exercises that have at least one completed set
+        const completedSets = exercise.actualSets.filter(
+          (set) => set.completed
+        );
+        if (completedSets.length === 0) continue;
+
+        // Calculate stats from completed sets
+        const bestReps = Math.max(...completedSets.map((set) => set.reps || 0));
+        const bestWeight = Math.max(
+          ...completedSets.map((set) => set.weight || 0)
+        );
+        const lastSetNumber = Math.max(
+          ...completedSets.map((set) => set.setNumber)
+        );
+
+        // Insert the session exercise with aggregated data
+        const { error: exerciseError } = await supabase
           .from("session_exercises")
           .insert({
             session_id: session.id,
             exercise_id: exercise.id,
             user_id: user.id,
-            completed: true,
-          })
-          .select()
-          .single();
+            reps: bestReps,
+            weight: bestWeight,
+            set_number: lastSetNumber,
+            // Optional: If your table has a JSON column for detailed set data
+            // sets_data: setsData
+          });
 
         if (exerciseError) {
           console.error("Error inserting session exercise:", exerciseError);
-          continue; // Continue with other exercises even if one fails
-        }
-
-        // 3. Insert all sets for this exercise
-        const setsToInsert = exercise.actualSets.map((set) => ({
-          session_exercise_id: sessionExercise.id,
-          set_number: set.setNumber,
-          reps: set.reps || 0,
-          weight: set.weight || 0,
-          completed: set.completed,
-          user_id: user.id,
-        }));
-
-        if (setsToInsert.length > 0) {
-          const { error: setsError } = await supabase
-            .from("session_exercise_sets")
-            .insert(setsToInsert);
-
-          if (setsError) {
-            console.error("Error inserting sets:", setsError);
-          }
+          console.error("Error details:", JSON.stringify(exerciseError));
         }
       }
 
       // After successful session submission
       endSession();
-      toast.success("Session completed!");
-      router.push(`/protected/sessions/${session.id}`);
 
-      return true; // Return true to indicate success
+      // Direct localStorage cleanup as an extra safeguard
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("fitflow-active-session");
+      }
+
+      toast.success("Session completed!");
+
+      // Add a delay before navigation to ensure session cleanup completes
+      setTimeout(() => {
+        router.push(`/protected/sessions/${session.id}`);
+      }, 300);
+
+      return true;
     } catch (error: any) {
       console.error("Error saving session:", error);
       toast.error(
         "Failed to save session: " + (error.message || "Unknown error")
       );
       setIsSubmitting(false);
-
-      return false; // Return false to indicate failure
+      return false;
     }
   };
 
@@ -676,6 +716,7 @@ export default function WorkoutSession() {
 
           // If this is a PR, update the analytics table
           if (update.isPR) {
+            // Calculate volume (weight × reps × sets)
             const { error: analyticsError } = await supabase
               .from("analytics")
               .upsert(
@@ -683,6 +724,7 @@ export default function WorkoutSession() {
                   user_id: user.id,
                   exercise_id: update.exercise_id,
                   max_weight: update.weight,
+                  volume: update.weight * update.reps * update.sets,
                   updated_at: new Date().toISOString(),
                 },
                 {
@@ -744,6 +786,48 @@ export default function WorkoutSession() {
     setCategoryFilter("all");
     setCurrentPage(1); // Reset to first page
     onOpen();
+  };
+
+  // Add this function to your component
+  const handleSetCompletion = (exerciseIndex: number, setIndex: number) => {
+    const newExercises = [...sessionExercises];
+    const currentSet = newExercises[exerciseIndex].actualSets[setIndex];
+    const previousSets = newExercises[exerciseIndex].actualSets.filter(
+      (_, idx) => idx < setIndex && !_.completed
+    );
+
+    // Check if previous sets are incomplete
+    if (previousSets.length > 0 && !currentSet.completed) {
+      // Show warning but allow it
+      toast.warning(
+        `You have ${previousSets.length} incomplete previous set(s). Consider completing in order.`
+      );
+    }
+
+    // Prevent marking sets as complete if they have no data
+    if (
+      (currentSet.reps === 0 || currentSet.reps === null) &&
+      !currentSet.completed
+    ) {
+      toast.error("Please enter reps before marking set as complete");
+      return;
+    }
+
+    if (
+      (currentSet.weight === 0 || currentSet.weight === null) &&
+      !currentSet.completed
+    ) {
+      toast.warning("You're marking a set as complete with 0 weight");
+    }
+
+    // Toggle completion status
+    newExercises[exerciseIndex].actualSets[setIndex].completed =
+      !currentSet.completed;
+    setSessionExercises(newExercises);
+
+    if (!currentSet.completed) {
+      toast.success(`Set ${currentSet.setNumber} completed!`);
+    }
   };
 
   if (authError) {
@@ -1386,23 +1470,9 @@ export default function WorkoutSession() {
                                   ? "ring-2 ring-success ring-opacity-50"
                                   : ""
                               }`}
-                              onPress={() => {
-                                const newExercises = [...sessionExercises];
-                                const wasCompleted =
-                                  newExercises[exerciseIndex].actualSets[
-                                    setIndex
-                                  ].completed;
-                                newExercises[exerciseIndex].actualSets[
-                                  setIndex
-                                ].completed = !wasCompleted;
-                                setSessionExercises(newExercises);
-
-                                if (!wasCompleted) {
-                                  toast.success(
-                                    `Set ${set.setNumber} completed!`
-                                  );
-                                }
-                              }}
+                              onPress={() =>
+                                handleSetCompletion(exerciseIndex, setIndex)
+                              }
                             >
                               {set.completed ? "Completed" : "Mark Complete"}
                             </Button>
@@ -2097,6 +2167,130 @@ export default function WorkoutSession() {
                   }}
                 >
                   Add Exercise
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Incomplete Exercises Confirmation Modal */}
+      <Modal
+        isOpen={showIncompleteExercisesModal}
+        onClose={() => setShowIncompleteExercisesModal(false)}
+        backdrop="opaque"
+        placement="center"
+        size="sm"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <h3 className="text-lg font-bold">Incomplete Exercises</h3>
+              </ModalHeader>
+              <ModalBody>
+                <p>The following exercises have no completed sets:</p>
+                <p className="font-semibold text-danger">
+                  {incompleteExercisesNames}
+                </p>
+                <p className="mt-2">Do you still want to finish the workout?</p>
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  variant="light"
+                  onPress={() => {
+                    setShowIncompleteExercisesModal(false);
+                    setCompletingWorkout(false);
+                  }}
+                >
+                  No, Go Back
+                </Button>
+                <Button
+                  color="primary"
+                  onPress={async () => {
+                    setShowIncompleteExercisesModal(false);
+
+                    // Important: Set completingWorkout to true again
+                    setCompletingWorkout(true);
+
+                    // Continue with workout submission
+                    const endTime = new Date().toISOString();
+
+                    // Prepare updates based on session performance
+                    const updates: {
+                      [exerciseId: string]: {
+                        sets: number;
+                        reps: number;
+                        weight: number;
+                        selected: boolean;
+                        isPR: boolean;
+                        manuallyEdited: boolean;
+                      };
+                    } = {};
+
+                    // Rest of your onSessionSubmit logic
+                    // This duplicates the code after the previous confirm dialog
+
+                    // Track if we have any updates to suggest
+                    let hasUpdatesToSuggest = false;
+
+                    // Get existing PRs for comparison
+                    const { data: existingPRs } = await supabase
+                      .from("analytics")
+                      .select("exercise_id, max_weight")
+                      .eq("user_id", user.id);
+
+                    const prMap = new Map();
+                    existingPRs?.forEach((pr) => {
+                      prMap.set(pr.exercise_id, pr.max_weight);
+                    });
+
+                    // Calculate suggested updates based on session performance
+                    sessionExercises.forEach((exercise) => {
+                      const completedSets = exercise.actualSets.filter(
+                        (set) => set.completed
+                      );
+                      if (completedSets.length > 0) {
+                        // Get the best weight and reps from completed sets
+                        const bestWeight = Math.max(
+                          ...completedSets.map((set) => set.weight || 0)
+                        );
+                        const bestReps = Math.max(
+                          ...completedSets.map((set) => set.reps || 0)
+                        );
+
+                        // Check if this is a PR for weight
+                        const isPR = bestWeight > (prMap.get(exercise.id) || 0);
+
+                        // Determine if we should suggest updates (did they exceed targets?)
+                        const shouldUpdate =
+                          bestWeight > exercise.targetWeight ||
+                          bestReps > exercise.targetReps ||
+                          completedSets.length !== exercise.actualSets.length;
+
+                        if (shouldUpdate) hasUpdatesToSuggest = true;
+
+                        updates[exercise.id] = {
+                          sets: completedSets.length,
+                          reps: bestReps,
+                          weight: bestWeight,
+                          selected: shouldUpdate, // Pre-select exercises that exceeded targets
+                          isPR,
+                          manuallyEdited: false,
+                        };
+                      }
+                    });
+
+                    if (hasUpdatesToSuggest) {
+                      setWorkoutUpdates(updates);
+                      setShowUpdateWorkoutModal(true);
+                    } else {
+                      // If no updates to suggest, proceed with normal flow
+                      await finalizeSession(endTime);
+                    }
+                  }}
+                >
+                  Yes, Finish Workout
                 </Button>
               </ModalFooter>
             </>
