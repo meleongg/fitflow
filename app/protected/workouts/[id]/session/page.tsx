@@ -7,9 +7,17 @@ import { useSession } from "@/contexts/SessionContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { createClient } from "@/utils/supabase/client";
-import { displayWeight, kgToLbs, lbsToKg } from "@/utils/units";
+import {
+  convertFromStorageUnit,
+  convertToStorageUnit,
+  displayWeight,
+  kgToLbs,
+  lbsToKg,
+} from "@/utils/units";
 import {
   Button,
+  Checkbox,
+  Chip,
   Form,
   Input,
   Modal,
@@ -560,32 +568,79 @@ export default function WorkoutSession() {
     }
   };
 
-  // Add this function to handle the final submission
+  // Fix the finalizeSession function in your WorkoutSession component
   const finalizeSession = async (endTime: string) => {
     setIsSubmitting(true);
 
     try {
-      // Your existing session saving code...
-      const sessionData = {
-        // existing session data preparation
-      };
-
-      const { data: session, error } = await supabase
+      // 1. First create the session record
+      const { data: session, error: sessionError } = await supabase
         .from("sessions")
-        .insert(sessionData)
+        .insert({
+          user_id: user.id,
+          workout_id: workoutId,
+          started_at: sessionStartTime || new Date().toISOString(),
+          ended_at: endTime,
+        })
         .select()
         .single();
 
-      if (error) throw error;
+      if (sessionError) throw sessionError;
+
+      // 2. Then insert all session exercises
+      for (const exercise of sessionExercises) {
+        // Insert the session exercise
+        const { data: sessionExercise, error: exerciseError } = await supabase
+          .from("session_exercises")
+          .insert({
+            session_id: session.id,
+            exercise_id: exercise.id,
+            user_id: user.id,
+            completed: true,
+          })
+          .select()
+          .single();
+
+        if (exerciseError) {
+          console.error("Error inserting session exercise:", exerciseError);
+          continue; // Continue with other exercises even if one fails
+        }
+
+        // 3. Insert all sets for this exercise
+        const setsToInsert = exercise.actualSets.map((set) => ({
+          session_exercise_id: sessionExercise.id,
+          set_number: set.setNumber,
+          reps: set.reps || 0,
+          weight: set.weight || 0,
+          completed: set.completed,
+          user_id: user.id,
+        }));
+
+        if (setsToInsert.length > 0) {
+          const { error: setsError } = await supabase
+            .from("session_exercise_sets")
+            .insert(setsToInsert);
+
+          if (setsError) {
+            console.error("Error inserting sets:", setsError);
+          }
+        }
+      }
 
       // After successful session submission
       endSession();
       toast.success("Session completed!");
       router.push(`/protected/sessions/${session.id}`);
+
+      return true; // Return true to indicate success
     } catch (error: any) {
       console.error("Error saving session:", error);
-      toast.error("Failed to save session");
+      toast.error(
+        "Failed to save session: " + (error.message || "Unknown error")
+      );
       setIsSubmitting(false);
+
+      return false; // Return false to indicate failure
     }
   };
 
@@ -609,7 +664,6 @@ export default function WorkoutSession() {
       if (selectedUpdates.length > 0) {
         // Update each workout exercise
         for (const update of selectedUpdates) {
-          // Update workout exercises
           await supabase
             .from("workout_exercises")
             .update({
@@ -1523,57 +1577,263 @@ export default function WorkoutSession() {
         </div>
       </Form>
 
-      {/* Add this modal at the end of your component, before the closing return tag */}
+      {/* Add this modal at the end of your component */}
       <Modal
-        backdrop="opaque"
-        isOpen={isCancelConfirmOpen}
-        onClose={onCancelConfirmClose}
-        className="dark:bg-gray-900"
-        placement="center"
+        isOpen={showUpdateWorkoutModal}
+        onClose={() => {
+          // Close the modal first
+          setShowUpdateWorkoutModal(false);
+
+          // Then finalize the session with a slight delay
+          setTimeout(async () => {
+            try {
+              await finalizeSession(new Date().toISOString());
+            } catch (err) {
+              console.error("Session finalization failed:", err);
+              toast.error("Failed to complete workout session");
+              setIsSubmitting(false);
+            }
+          }, 100);
+        }}
+        size="lg"
       >
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
-                Cancel Workout
+                <h2 className="text-xl">Update Workout Defaults</h2>
               </ModalHeader>
               <ModalBody>
-                <p>
-                  Are you sure you want to cancel this workout? Progress will be
-                  lost.
+                <p className="text-sm text-default-500 mb-4">
+                  Would you like to update your workout defaults based on
+                  today's performance? Select the exercises you want to update:
                 </p>
+
+                <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                  {Object.entries(workoutUpdates).map(
+                    ([exerciseId, update]) => {
+                      // Find the exercise in sessionExercises to get the name
+                      const exercise = sessionExercises.find(
+                        (ex) => ex.id === exerciseId
+                      );
+                      if (!exercise) return null;
+
+                      // Calculate if there's a difference
+                      const isDifferent =
+                        update.sets !== exercise.targetSets ||
+                        update.reps !== exercise.targetReps ||
+                        update.weight !== exercise.targetWeight;
+
+                      return (
+                        <div
+                          key={exerciseId}
+                          className={`p-3 rounded-lg border ${
+                            isDifferent
+                              ? "border-primary/30 bg-primary/5"
+                              : "border-default-200"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                isSelected={update.selected}
+                                onValueChange={(isSelected) => {
+                                  setWorkoutUpdates({
+                                    ...workoutUpdates,
+                                    [exerciseId]: {
+                                      ...update,
+                                      selected: isSelected,
+                                    },
+                                  });
+                                }}
+                              />
+                              <span className="font-medium">
+                                {exercise.name}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              {update.isPR && (
+                                <Chip color="success" size="sm">
+                                  New PR!
+                                </Chip>
+                              )}
+                              {update.manuallyEdited && (
+                                <Chip variant="flat" size="sm">
+                                  Edited
+                                </Chip>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="pl-7 grid grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <p className="text-xs text-default-500">Sets:</p>
+                              <Input
+                                size="sm"
+                                type="number"
+                                value={update.sets.toString()}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value || "0");
+                                  setWorkoutUpdates({
+                                    ...workoutUpdates,
+                                    [exerciseId]: {
+                                      ...update,
+                                      sets: value,
+                                      manuallyEdited: true,
+                                    },
+                                  });
+                                }}
+                                endContent={
+                                  <div className="flex items-center">
+                                    <span className="text-default-400 text-small">
+                                      / {exercise.targetSets}
+                                    </span>
+                                  </div>
+                                }
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <p className="text-xs text-default-500">Reps:</p>
+                              <Input
+                                size="sm"
+                                type="number"
+                                value={update.reps.toString()}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value || "0");
+                                  setWorkoutUpdates({
+                                    ...workoutUpdates,
+                                    [exerciseId]: {
+                                      ...update,
+                                      reps: value,
+                                      manuallyEdited: true,
+                                    },
+                                  });
+                                }}
+                                endContent={
+                                  <div className="flex items-center">
+                                    <span className="text-default-400 text-small">
+                                      / {exercise.targetReps}
+                                    </span>
+                                  </div>
+                                }
+                              />
+                            </div>
+
+                            {/* Update the weight input in the modal to respect unit preferences */}
+                            <div className="space-y-1">
+                              <p className="text-xs text-default-500">
+                                Weight:
+                              </p>
+                              <Input
+                                size="sm"
+                                type="number"
+                                // Convert from storage unit (kg) to display unit based on preference
+                                value={convertFromStorageUnit(
+                                  update.weight,
+                                  useMetric
+                                ).toFixed(1)}
+                                onChange={(e) => {
+                                  // Parse the input value
+                                  const displayValue = parseFloat(
+                                    e.target.value || "0"
+                                  );
+
+                                  // Convert back to storage unit (kg)
+                                  const storageValue = convertToStorageUnit(
+                                    displayValue,
+                                    useMetric
+                                  );
+
+                                  setWorkoutUpdates({
+                                    ...workoutUpdates,
+                                    [exerciseId]: {
+                                      ...update,
+                                      weight: storageValue,
+                                      manuallyEdited: true,
+                                    },
+                                  });
+                                }}
+                                endContent={
+                                  <div className="flex items-center">
+                                    <span className="text-default-400 text-small">
+                                      {useMetric ? "kg" : "lbs"}
+                                    </span>
+                                  </div>
+                                }
+                              />
+                            </div>
+                          </div>
+
+                          {/* Show the difference from current targets */}
+                          {isDifferent && (
+                            <div className="mt-2 pl-7 text-xs text-success">
+                              {update.sets !== exercise.targetSets && (
+                                <span className="mr-3">
+                                  Sets: {exercise.targetSets} →{" "}
+                                  <strong>{update.sets}</strong>
+                                </span>
+                              )}
+                              {update.reps !== exercise.targetReps && (
+                                <span className="mr-3">
+                                  Reps: {exercise.targetReps} →{" "}
+                                  <strong>{update.reps}</strong>
+                                </span>
+                              )}
+                              {update.weight !== exercise.targetWeight && (
+                                <span>
+                                  Weight:{" "}
+                                  {displayWeight(
+                                    exercise.targetWeight,
+                                    useMetric
+                                  )}{" "}
+                                  →{" "}
+                                  <strong>
+                                    {displayWeight(update.weight, useMetric)}
+                                  </strong>
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
               </ModalBody>
               <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  Keep Working
-                </Button>
                 <Button
-                  color="danger"
-                  onPress={() => {
-                    // Create a loading toast and store its ID
-                    const loadingToastId = toast.loading(
-                      "Cancelling workout..."
-                    );
+                  variant="flat"
+                  onPress={async () => {
+                    // Close the modal first
+                    setShowUpdateWorkoutModal(false);
 
-                    // Call the endSession function from context
-                    endSession();
-
-                    // Also clean up the timer
-                    localStorage.removeItem("workout-timer-state");
-
-                    // Dismiss the loading toast before showing the success toast
-                    toast.dismiss(loadingToastId);
-                    toast.success("Workout cancelled");
-
-                    // Use window.location instead of router.push to force a complete page refresh
-                    setTimeout(() => {
-                      window.location.href = "/protected/workouts";
+                    // Then finalize the session
+                    setTimeout(async () => {
+                      try {
+                        await finalizeSession(new Date().toISOString());
+                      } catch (err) {
+                        console.error("Session finalization failed:", err);
+                        toast.error("Failed to complete workout session");
+                        setIsSubmitting(false);
+                      }
                     }, 100);
-
-                    onClose();
                   }}
                 >
-                  Yes, Cancel Workout
+                  Skip
+                </Button>
+                <Button
+                  color="primary"
+                  onPress={() => {
+                    // Close the modal first to prevent UI getting stuck
+                    setShowUpdateWorkoutModal(false);
+                    // Then handle the workout update
+                    setTimeout(() => {
+                      handleWorkoutUpdate();
+                    }, 100);
+                  }}
+                >
+                  Update Workout
                 </Button>
               </ModalFooter>
             </>
