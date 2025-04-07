@@ -764,6 +764,19 @@ export default function WorkoutSession() {
   if (error) return <div className="text-red-500">{error}</div>;
   if (!workout) return <div>Workout not found</div>;
 
+  // First, add these state variables to your WorkoutSession component
+  const [showUpdateWorkoutModal, setShowUpdateWorkoutModal] = useState(false);
+  const [workoutUpdates, setWorkoutUpdates] = useState<{
+    [exerciseId: string]: {
+      sets: number;
+      reps: number;
+      weight: number;
+      selected: boolean;
+      isPR: boolean;
+      manuallyEdited: boolean;
+    };
+  }>({});
+
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4">
       <PageTitle title="Workout Session" />
