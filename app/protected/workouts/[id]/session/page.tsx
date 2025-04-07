@@ -663,14 +663,22 @@ export default function WorkoutSession() {
 
       // Direct localStorage cleanup as an extra safeguard
       if (typeof window !== "undefined") {
+        // Clear all session-related localStorage items
         localStorage.removeItem("fitflow-active-session");
+        localStorage.removeItem("workout-timer-state");
+
+        console.log("Session cleanup complete");
       }
 
       toast.success("Session completed!");
 
-      // Add a delay before navigation to ensure session cleanup completes
+      // Use window.location.href with replace() instead of router.push
+      // This forces a FULL page reload instead of client-side navigation
       setTimeout(() => {
-        router.push(`/protected/sessions/${session.id}`);
+        // The replace() method prevents going back to the current page
+        window.location.replace(
+          `/protected/sessions/${session.id}?ts=${Date.now()}`
+        );
       }, 300);
 
       return true;
@@ -716,24 +724,52 @@ export default function WorkoutSession() {
 
           // If this is a PR, update the analytics table
           if (update.isPR) {
-            // Calculate volume (weight × reps × sets)
-            const { error: analyticsError } = await supabase
-              .from("analytics")
-              .upsert(
-                {
+            try {
+              const numericWeight = Number(update.weight) || 0;
+              const numericReps = Number(update.reps) || 0;
+              const numericSets = Number(update.sets) || 0;
+              const volume = numericWeight * numericReps * numericSets;
+
+              // Log the exact payload we're sending
+              console.log("Analytics payload:", {
+                user_id: user.id,
+                exercise_id: update.exercise_id,
+                max_weight: numericWeight,
+                volume: volume,
+                updated_at: new Date().toISOString(),
+              });
+
+              const { data, error: analyticsError } = await supabase
+                .from("analytics")
+                .upsert(
+                  {
+                    user_id: user.id,
+                    exercise_id: update.exercise_id,
+                    max_weight: numericWeight,
+                    volume: volume,
+                    updated_at: new Date().toISOString(),
+                  },
+                  {
+                    onConflict: "user_id,exercise_id",
+                    // Remove the "returning: minimal" option
+                  }
+                );
+
+              if (analyticsError) {
+                console.error(
+                  "Detailed analytics error:",
+                  JSON.stringify(analyticsError)
+                );
+                // Log more details for debugging
+                console.error("Failed update data:", {
                   user_id: user.id,
                   exercise_id: update.exercise_id,
-                  max_weight: update.weight,
-                  volume: update.weight * update.reps * update.sets,
-                  updated_at: new Date().toISOString(),
-                },
-                {
-                  onConflict: "user_id,exercise_id",
-                }
-              );
-
-            if (analyticsError) {
-              console.error("Error updating analytics:", analyticsError);
+                  max_weight: numericWeight,
+                  volume: volume,
+                });
+              }
+            } catch (err) {
+              console.error("Exception in analytics update:", err);
             }
           }
         }
@@ -747,8 +783,10 @@ export default function WorkoutSession() {
         toast.info("No workout updates selected");
       }
 
-      // Proceed with session finalization
-      await finalizeSession(new Date().toISOString());
+      // Instead of trying to access session.id directly, call finalizeSession
+      // which will create the session and handle the navigation
+      const endTime = new Date().toISOString();
+      await finalizeSession(endTime);
     } catch (error: any) {
       console.error("Error updating workout:", error);
       toast.error("Failed to update workout defaults");

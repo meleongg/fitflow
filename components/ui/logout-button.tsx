@@ -34,7 +34,6 @@ export default function LogoutButton() {
     // Clear specific keys
     const keysToRemove = [
       "fitflow-active-session",
-      "workout-timer-state",
       "rest-timer-duration",
       "fitflow-theme",
       // Add any other app-specific keys here

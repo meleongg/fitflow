@@ -20,129 +20,137 @@ export default function ActiveSessionBanner() {
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
-  // Add an extra safety check for localStorage consistency
-  const [isStorageValid, setIsStorageValid] = useState(true);
+  // Check actual localStorage state directly
+  const verifyActiveSession = () => {
+    if (typeof window === "undefined") return false;
 
-  // Validate localStorage consistency on render
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const sessionData = localStorage.getItem("fitflow-active-session");
+    try {
+      const rawData = localStorage.getItem("fitflow-active-session");
 
-      // If context says no session but localStorage has data
-      if (!activeSession && sessionData) {
-        console.log(
-          "ActiveSessionBanner - Inconsistency detected: cleaning localStorage"
-        );
-        try {
-          localStorage.removeItem("fitflow-active-session");
-          localStorage.removeItem("workout-timer-state");
-        } catch (e) {
-          console.error("Error cleaning localStorage:", e);
-        }
-        setIsStorageValid(false);
-      }
+      // If no data in localStorage, no active session
+      if (!rawData) return false;
 
-      // If context has session but localStorage doesn't
-      if (activeSession && !sessionData) {
-        console.log(
-          "ActiveSessionBanner - Inconsistency detected: context has session but localStorage doesn't"
-        );
-        setIsStorageValid(false);
-      }
+      // Try to parse the data
+      const sessionData = JSON.parse(rawData);
+
+      // Verify the session data has required fields
+      return !!(
+        sessionData &&
+        sessionData.workoutId &&
+        sessionData.workoutName &&
+        sessionData.startTime
+      );
+    } catch (e) {
+      console.error("Error verifying active session:", e);
+      // If there's an error, clean up localStorage
+      localStorage.removeItem("fitflow-active-session");
+      return false;
     }
-  }, [activeSession]);
+  };
 
-  // Debug logs whenever activeSession changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      console.log("ActiveSessionBanner - Session state:", {
-        hasSession: !!activeSession,
-        activeSession,
-        localStorage: {
-          hasItem: !!localStorage.getItem("fitflow-active-session"),
-          rawData: localStorage.getItem("fitflow-active-session"),
-        },
-      });
-    }
-  }, [activeSession]);
-
-  // Set client-side flag to prevent hydration mismatch
+  // Set client-side flag and do initial verification
   useEffect(() => {
     setIsClient(true);
-    console.log("ActiveSessionBanner - Client-side rendering enabled");
+
+    // Initial verification of localStorage data
+    const hasValidSession = verifyActiveSession();
+    setShouldRender(hasValidSession);
+
+    // Listen for storage events from other components/tabs
+    const handleStorageChange = () => {
+      const hasSession = verifyActiveSession();
+      setShouldRender(hasSession);
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("session-ended", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("session-ended", handleStorageChange);
+    };
   }, []);
+
+  // Re-verify whenever activeSession context changes
+  useEffect(() => {
+    if (isClient) {
+      const hasValidSession = verifyActiveSession();
+
+      // If context says there's a session but localStorage says no, don't render
+      if (activeSession && !hasValidSession) {
+        console.log(
+          "Context has session but localStorage doesn't - skipping render"
+        );
+        setShouldRender(false);
+      } else if (!activeSession && hasValidSession) {
+        // If localStorage has session but context doesn't, clean up localStorage
+        console.log(
+          "Inconsistency: localStorage has session but context doesn't"
+        );
+        localStorage.removeItem("fitflow-active-session");
+        setShouldRender(false);
+      } else {
+        setShouldRender(!!activeSession && hasValidSession);
+      }
+    }
+  }, [activeSession, isClient]);
 
   // Calculate and update elapsed time
   useEffect(() => {
-    // Don't do anything if there's no session or during SSR
-    if (!activeSession || !isClient) {
-      console.log("ActiveSessionBanner - Skip timer:", {
-        hasActiveSession: !!activeSession,
-        isClient,
-      });
+    if (!shouldRender || !activeSession || !isClient) {
       return;
     }
 
     const calculateElapsed = () => {
-      if (!activeSession?.startTime) {
-        console.warn("ActiveSessionBanner - Missing startTime in session");
-        return 0;
-      }
+      if (!activeSession?.startTime) return 0;
 
       try {
         const startTime = new Date(activeSession.startTime).getTime();
         const currentTime = Date.now();
-        const minutes = Math.floor((currentTime - startTime) / 60000);
-
-        console.log("ActiveSessionBanner - Time calculation:", {
-          startTime: activeSession.startTime,
-          parsedStartTime: startTime,
-          currentTime,
-          elapsedMinutes: minutes,
-        });
-
-        return minutes;
+        return Math.floor((currentTime - startTime) / 60000);
       } catch (error) {
-        console.error(
-          "ActiveSessionBanner - Error calculating elapsed time:",
-          error
-        );
+        console.error("Error calculating elapsed time:", error);
         return 0;
       }
     };
 
-    // Initial calculation
     setElapsedMinutes(calculateElapsed());
-
-    // Update every 30 seconds
     const interval = setInterval(() => {
       setElapsedMinutes(calculateElapsed());
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [activeSession, isClient]);
+  }, [activeSession, isClient, shouldRender]);
 
-  // Don't render anything during server-side rendering
+  // Enhanced endSession to ensure complete cleanup
+  const handleEndSession = () => {
+    console.log("Ending session via banner");
+
+    // Use the context's endSession
+    endSession();
+
+    // Extra cleanup for redundancy
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("fitflow-active-session");
+        window.dispatchEvent(new Event("storage"));
+      } catch (e) {
+        console.error("Error during cleanup:", e);
+      }
+    }
+
+    // Force our component to update
+    setShouldRender(false);
+    setShowEndConfirmation(false);
+  };
+
+  // Don't render during SSR
   if (!isClient) return null;
 
-  // Don't render if context says no session OR we detected an inconsistency
-  if (!activeSession || !isStorageValid) {
-    console.log("ActiveSessionBanner - Not rendering:", {
-      hasActiveSession: !!activeSession,
-      isStorageValid,
-    });
-    return null;
-  }
-
-  // Additional defense - verify required session properties exist
-  if (!activeSession.workoutId || !activeSession.workoutName) {
-    console.log(
-      "ActiveSessionBanner - Session data incomplete:",
-      activeSession
-    );
-    return null;
-  }
+  // Don't render if we've determined we shouldn't
+  if (!shouldRender) return null;
 
   return (
     <div className="bg-amber-100 dark:bg-amber-900 border-l-4 border-amber-500 p-4 mb-4 shadow-md">
@@ -150,7 +158,7 @@ export default function ActiveSessionBanner() {
         <div>
           <p className="font-bold dark:text-white">Active Workout Session</p>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            {activeSession.workoutName} ({elapsedMinutes}{" "}
+            {activeSession?.workoutName} ({elapsedMinutes}{" "}
             {elapsedMinutes === 1 ? "minute" : "minutes"} elapsed)
           </p>
         </div>
@@ -167,7 +175,11 @@ export default function ActiveSessionBanner() {
           </Button>
           <Button
             as={Link}
-            href={`/protected/workouts/${activeSession.workoutId}/session`}
+            href={
+              activeSession?.workoutId
+                ? `/protected/workouts/${activeSession.workoutId}/session`
+                : "/protected/workouts"
+            }
             color="primary"
             size="sm"
             className="w-full sm:w-auto dark:text-white"
@@ -176,6 +188,24 @@ export default function ActiveSessionBanner() {
           </Button>
         </div>
       </div>
+
+      {/* Add a manual debug reset button in development */}
+      {process.env.NODE_ENV === "development" && (
+        <Button
+          size="sm"
+          className="mt-2 text-xs"
+          color="danger"
+          variant="ghost"
+          onPress={() => {
+            localStorage.removeItem("fitflow-active-session");
+            endSession();
+            setShouldRender(false);
+            window.location.reload();
+          }}
+        >
+          Force Reset (Debug)
+        </Button>
+      )}
 
       <Modal
         isOpen={showEndConfirmation}
@@ -200,16 +230,7 @@ export default function ActiveSessionBanner() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  color="danger"
-                  onPress={() => {
-                    console.log(
-                      "ActiveSessionBanner - Ending session via banner"
-                    );
-                    endSession();
-                    setShowEndConfirmation(false);
-                  }}
-                >
+                <Button color="danger" onPress={handleEndSession}>
                   End Session
                 </Button>
               </ModalFooter>
