@@ -1689,10 +1689,7 @@ export default function WorkoutSession() {
       <Modal
         isOpen={showUpdateWorkoutModal}
         onClose={() => {
-          // Close the modal first
           setShowUpdateWorkoutModal(false);
-
-          // Then finalize the session with a slight delay
           setTimeout(async () => {
             try {
               await finalizeSession(new Date().toISOString());
@@ -1704,12 +1701,35 @@ export default function WorkoutSession() {
           }, 100);
         }}
         size="lg"
+        placement="center"
+        backdrop="opaque"
         classNames={{
           base: "max-w-[95%] sm:max-w-3xl mx-auto",
+          wrapper: "items-center justify-center p-2",
           header: "pb-0 border-b border-default-200",
-          body: "py-5",
+          body: "py-5 px-4",
           footer: "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-3 justify-end",
           closeButton: "top-3 right-3",
+        }}
+        motionProps={{
+          variants: {
+            enter: {
+              y: 0,
+              opacity: 1,
+              transition: {
+                duration: 0.3,
+                ease: "easeOut",
+              },
+            },
+            exit: {
+              y: -20,
+              opacity: 0,
+              transition: {
+                duration: 0.2,
+                ease: "easeIn",
+              },
+            },
+          },
         }}
       >
         <ModalContent>
@@ -2249,21 +2269,84 @@ export default function WorkoutSession() {
               </ModalBody>
               <ModalFooter>
                 <Button
-                  variant="light"
-                  fullWidth
-                  onPress={() => {
-                    setShowIncompleteExercisesModal(false);
-                    setCompletingWorkout(false);
-                  }}
-                >
-                  No, Go Back
-                </Button>
-                <Button
                   color="primary"
                   fullWidth
                   onPress={async () => {
                     setShowIncompleteExercisesModal(false);
-                    // ... rest of your existing code
+                    setCompletingWorkout(true);
+
+                    // Continue with existing workflow from onSessionSubmit
+                    const endTime = new Date().toISOString();
+
+                    // Prepare updates based on session performance
+                    const updates: {
+                      [exerciseId: string]: {
+                        sets: number;
+                        reps: number;
+                        weight: number;
+                        selected: boolean;
+                        isPR: boolean;
+                        manuallyEdited: boolean;
+                      };
+                    } = {};
+
+                    // Track if we have any updates to suggest
+                    let hasUpdatesToSuggest = false;
+
+                    // Get existing PRs for comparison
+                    const { data: existingPRs } = await supabase
+                      .from("analytics")
+                      .select("exercise_id, max_weight")
+                      .eq("user_id", user.id);
+
+                    const prMap = new Map();
+                    existingPRs?.forEach((pr) => {
+                      prMap.set(pr.exercise_id, pr.max_weight);
+                    });
+
+                    // Calculate suggested updates based on session performance
+                    sessionExercises.forEach((exercise) => {
+                      const completedSets = exercise.actualSets.filter(
+                        (set) => set.completed
+                      );
+                      if (completedSets.length > 0) {
+                        // Get the best weight and reps from completed sets
+                        const bestWeight = Math.max(
+                          ...completedSets.map((set) => set.weight || 0)
+                        );
+                        const bestReps = Math.max(
+                          ...completedSets.map((set) => set.reps || 0)
+                        );
+
+                        // Check if this is a PR for weight
+                        const isPR = bestWeight > (prMap.get(exercise.id) || 0);
+
+                        // Determine if we should suggest updates (did they exceed targets?)
+                        const shouldUpdate =
+                          bestWeight > exercise.targetWeight ||
+                          bestReps > exercise.targetReps ||
+                          completedSets.length !== exercise.actualSets.length;
+
+                        if (shouldUpdate) hasUpdatesToSuggest = true;
+
+                        updates[exercise.id] = {
+                          sets: completedSets.length,
+                          reps: bestReps,
+                          weight: bestWeight,
+                          selected: shouldUpdate,
+                          isPR,
+                          manuallyEdited: false,
+                        };
+                      }
+                    });
+
+                    if (hasUpdatesToSuggest) {
+                      setWorkoutUpdates(updates);
+                      setShowUpdateWorkoutModal(true);
+                    } else {
+                      // If no updates to suggest, proceed with normal flow
+                      await finalizeSession(endTime);
+                    }
                   }}
                 >
                   Yes, Finish Workout
