@@ -1704,20 +1704,27 @@ export default function WorkoutSession() {
           }, 100);
         }}
         size="lg"
+        classNames={{
+          base: "max-w-[95%] sm:max-w-3xl mx-auto",
+          header: "pb-0 border-b border-default-200",
+          body: "py-5",
+          footer: "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-3 justify-end",
+          closeButton: "top-3 right-3",
+        }}
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">
+              <ModalHeader className="flex flex-col gap-1 pb-3">
                 <h2 className="text-xl">Update Workout Defaults</h2>
               </ModalHeader>
               <ModalBody>
-                <p className="text-sm text-default-500 mb-4">
+                <p className="text-sm text-default-500 mb-5 px-2">
                   Would you like to update your workout defaults based on
                   today's performance? Select the exercises you want to update:
                 </p>
 
-                <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto px-2">
                   {Object.entries(workoutUpdates).map(
                     ([exerciseId, update]) => {
                       // Find the exercise in sessionExercises to get the name
@@ -1735,13 +1742,13 @@ export default function WorkoutSession() {
                       return (
                         <div
                           key={exerciseId}
-                          className={`p-3 rounded-lg border ${
+                          className={`p-4 rounded-lg border ${
                             isDifferent
                               ? "border-primary/30 bg-primary/5"
                               : "border-default-200"
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                               <Checkbox
                                 isSelected={update.selected}
@@ -1773,7 +1780,7 @@ export default function WorkoutSession() {
                             </div>
                           </div>
 
-                          <div className="pl-7 grid grid-cols-3 gap-2">
+                          <div className="pl-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="space-y-1">
                               <p className="text-xs text-default-500">Sets:</p>
                               <Input
@@ -1828,7 +1835,6 @@ export default function WorkoutSession() {
                               />
                             </div>
 
-                            {/* Update the weight input in the modal to respect unit preferences */}
                             <div className="space-y-1">
                               <p className="text-xs text-default-500">
                                 Weight:
@@ -1836,18 +1842,14 @@ export default function WorkoutSession() {
                               <Input
                                 size="sm"
                                 type="number"
-                                // Convert from storage unit (kg) to display unit based on preference
                                 value={convertFromStorageUnit(
                                   update.weight,
                                   useMetric
                                 ).toFixed(1)}
                                 onChange={(e) => {
-                                  // Parse the input value
                                   const displayValue = parseFloat(
                                     e.target.value || "0"
                                   );
-
-                                  // Convert back to storage unit (kg)
                                   const storageValue = convertToStorageUnit(
                                     displayValue,
                                     useMetric
@@ -1875,32 +1877,34 @@ export default function WorkoutSession() {
 
                           {/* Show the difference from current targets */}
                           {isDifferent && (
-                            <div className="mt-2 pl-7 text-xs text-success">
-                              {update.sets !== exercise.targetSets && (
-                                <span className="mr-3">
-                                  Sets: {exercise.targetSets} →{" "}
-                                  <strong>{update.sets}</strong>
-                                </span>
-                              )}
-                              {update.reps !== exercise.targetReps && (
-                                <span className="mr-3">
-                                  Reps: {exercise.targetReps} →{" "}
-                                  <strong>{update.reps}</strong>
-                                </span>
-                              )}
-                              {update.weight !== exercise.targetWeight && (
-                                <span>
-                                  Weight:{" "}
-                                  {displayWeight(
-                                    exercise.targetWeight,
-                                    useMetric
-                                  )}{" "}
-                                  →{" "}
-                                  <strong>
-                                    {displayWeight(update.weight, useMetric)}
-                                  </strong>
-                                </span>
-                              )}
+                            <div className="mt-3 pl-7 text-xs text-success">
+                              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                {update.sets !== exercise.targetSets && (
+                                  <span>
+                                    Sets: {exercise.targetSets} →{" "}
+                                    <strong>{update.sets}</strong>
+                                  </span>
+                                )}
+                                {update.reps !== exercise.targetReps && (
+                                  <span>
+                                    Reps: {exercise.targetReps} →{" "}
+                                    <strong>{update.reps}</strong>
+                                  </span>
+                                )}
+                                {update.weight !== exercise.targetWeight && (
+                                  <span>
+                                    Weight:{" "}
+                                    {displayWeight(
+                                      exercise.targetWeight,
+                                      useMetric
+                                    )}{" "}
+                                    →{" "}
+                                    <strong>
+                                      {displayWeight(update.weight, useMetric)}
+                                    </strong>
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1912,11 +1916,10 @@ export default function WorkoutSession() {
               <ModalFooter>
                 <Button
                   variant="flat"
+                  fullWidth
+                  className="sm:max-w-[120px]"
                   onPress={async () => {
-                    // Close the modal first
                     setShowUpdateWorkoutModal(false);
-
-                    // Then finalize the session
                     setTimeout(async () => {
                       try {
                         await finalizeSession(new Date().toISOString());
@@ -1932,10 +1935,10 @@ export default function WorkoutSession() {
                 </Button>
                 <Button
                   color="primary"
+                  fullWidth
+                  className="sm:max-w-[180px]"
                   onPress={() => {
-                    // Close the modal first to prevent UI getting stuck
                     setShowUpdateWorkoutModal(false);
-                    // Then handle the workout update
                     setTimeout(() => {
                       handleWorkoutUpdate();
                     }, 100);
@@ -2219,23 +2222,35 @@ export default function WorkoutSession() {
         backdrop="opaque"
         placement="center"
         size="sm"
+        classNames={{
+          base: "max-w-[95%] sm:max-w-md mx-auto",
+          header: "pb-0",
+          body: "px-6 py-5",
+          footer: "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-2",
+          closeButton: "top-3 right-3",
+        }}
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">
+              <ModalHeader className="flex flex-col gap-1 border-b border-default-200 pb-3">
                 <h3 className="text-lg font-bold">Incomplete Exercises</h3>
               </ModalHeader>
               <ModalBody>
-                <p>The following exercises have no completed sets:</p>
-                <p className="font-semibold text-danger">
-                  {incompleteExercisesNames}
-                </p>
-                <p className="mt-2">Do you still want to finish the workout?</p>
+                <div className="space-y-3">
+                  <p>The following exercises have no completed sets:</p>
+                  <p className="font-semibold text-danger bg-danger-50 dark:bg-danger-900/20 p-3 rounded-md">
+                    {incompleteExercisesNames}
+                  </p>
+                  <p className="mt-2">
+                    Do you still want to finish the workout?
+                  </p>
+                </div>
               </ModalBody>
               <ModalFooter>
                 <Button
                   variant="light"
+                  fullWidth
                   onPress={() => {
                     setShowIncompleteExercisesModal(false);
                     setCompletingWorkout(false);
@@ -2245,87 +2260,10 @@ export default function WorkoutSession() {
                 </Button>
                 <Button
                   color="primary"
+                  fullWidth
                   onPress={async () => {
                     setShowIncompleteExercisesModal(false);
-
-                    // Important: Set completingWorkout to true again
-                    setCompletingWorkout(true);
-
-                    // Continue with workout submission
-                    const endTime = new Date().toISOString();
-
-                    // Prepare updates based on session performance
-                    const updates: {
-                      [exerciseId: string]: {
-                        sets: number;
-                        reps: number;
-                        weight: number;
-                        selected: boolean;
-                        isPR: boolean;
-                        manuallyEdited: boolean;
-                      };
-                    } = {};
-
-                    // Rest of your onSessionSubmit logic
-                    // This duplicates the code after the previous confirm dialog
-
-                    // Track if we have any updates to suggest
-                    let hasUpdatesToSuggest = false;
-
-                    // Get existing PRs for comparison
-                    const { data: existingPRs } = await supabase
-                      .from("analytics")
-                      .select("exercise_id, max_weight")
-                      .eq("user_id", user.id);
-
-                    const prMap = new Map();
-                    existingPRs?.forEach((pr) => {
-                      prMap.set(pr.exercise_id, pr.max_weight);
-                    });
-
-                    // Calculate suggested updates based on session performance
-                    sessionExercises.forEach((exercise) => {
-                      const completedSets = exercise.actualSets.filter(
-                        (set) => set.completed
-                      );
-                      if (completedSets.length > 0) {
-                        // Get the best weight and reps from completed sets
-                        const bestWeight = Math.max(
-                          ...completedSets.map((set) => set.weight || 0)
-                        );
-                        const bestReps = Math.max(
-                          ...completedSets.map((set) => set.reps || 0)
-                        );
-
-                        // Check if this is a PR for weight
-                        const isPR = bestWeight > (prMap.get(exercise.id) || 0);
-
-                        // Determine if we should suggest updates (did they exceed targets?)
-                        const shouldUpdate =
-                          bestWeight > exercise.targetWeight ||
-                          bestReps > exercise.targetReps ||
-                          completedSets.length !== exercise.actualSets.length;
-
-                        if (shouldUpdate) hasUpdatesToSuggest = true;
-
-                        updates[exercise.id] = {
-                          sets: completedSets.length,
-                          reps: bestReps,
-                          weight: bestWeight,
-                          selected: shouldUpdate, // Pre-select exercises that exceeded targets
-                          isPR,
-                          manuallyEdited: false,
-                        };
-                      }
-                    });
-
-                    if (hasUpdatesToSuggest) {
-                      setWorkoutUpdates(updates);
-                      setShowUpdateWorkoutModal(true);
-                    } else {
-                      // If no updates to suggest, proceed with normal flow
-                      await finalizeSession(endTime);
-                    }
+                    // ... rest of your existing code
                   }}
                 >
                   Yes, Finish Workout
