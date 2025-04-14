@@ -31,14 +31,32 @@ export const convertFromStorageUnit = (
   return isInMetric ? weight : kgToLbs(weight);
 };
 
-// In your utils/units.ts file
-export const displayWeight = (weight: number, useMetric: boolean): string => {
-  const value = useMetric ? weight : kgToLbs(weight);
-  const unit = useMetric ? "kg" : "lbs";
+/**
+ * Displays weight with proper units
+ * @param weight Weight value from database (in kg)
+ * @param useMetric Whether to display in metric or imperial
+ * @param includeUnit Whether to include the unit label (kg/lbs)
+ * @returns Formatted weight string
+ */
+export const displayWeight = (
+  weight: number,
+  useMetric: boolean,
+  includeUnit: boolean = true
+): string => {
+  // Make sure weight is a number
+  const numWeight = Number(weight);
 
-  // For volumes, round to whole numbers
-  const isLargeNumber = value >= 100;
-  const decimals = isLargeNumber ? 0 : 1;
+  // Check if it's a valid number
+  if (isNaN(numWeight) || numWeight === 0) return "-";
 
-  return `${value.toFixed(decimals)} ${unit}`;
+  // Convert the weight if necessary - assumes DB stores in kg
+  const convertedWeight = useMetric ? numWeight : numWeight * 2.20462;
+
+  // Format with 1 decimal place
+  const formattedWeight = parseFloat(convertedWeight.toFixed(1));
+
+  // Return with or without unit
+  return includeUnit
+    ? `${formattedWeight} ${useMetric ? "kg" : "lbs"}`
+    : String(formattedWeight);
 };

@@ -623,38 +623,29 @@ export default function WorkoutSession() {
 
       // 2. Insert session exercises with aggregated set data
       for (const exercise of sessionExercises) {
-        // Only process exercises that have at least one completed set
+        // Get all completed sets for this exercise
         const completedSets = exercise.actualSets.filter(
           (set) => set.completed
         );
-        if (completedSets.length === 0) continue;
 
-        // Calculate stats from completed sets
-        const bestReps = Math.max(...completedSets.map((set) => set.reps || 0));
-        const bestWeight = Math.max(
-          ...completedSets.map((set) => set.weight || 0)
-        );
-        const lastSetNumber = Math.max(
-          ...completedSets.map((set) => set.setNumber)
-        );
+        // Save EACH completed set as a separate database record
+        for (const set of completedSets) {
+          const { error: exerciseError } = await supabase
+            .from("session_exercises")
+            .insert({
+              session_id: session.id,
+              exercise_id: exercise.id,
+              user_id: user.id,
+              reps: set.reps,
+              weight: set.weight,
+              set_number: set.setNumber,
+              // You can also include other set-specific data if needed
+            });
 
-        // Insert the session exercise with aggregated data
-        const { error: exerciseError } = await supabase
-          .from("session_exercises")
-          .insert({
-            session_id: session.id,
-            exercise_id: exercise.id,
-            user_id: user.id,
-            reps: bestReps,
-            weight: bestWeight,
-            set_number: lastSetNumber,
-            // Optional: If your table has a JSON column for detailed set data
-            // sets_data: setsData
-          });
-
-        if (exerciseError) {
-          console.error("Error inserting session exercise:", exerciseError);
-          console.error("Error details:", JSON.stringify(exerciseError));
+          if (exerciseError) {
+            console.error("Error inserting session exercise:", exerciseError);
+            console.error("Error details:", JSON.stringify(exerciseError));
+          }
         }
       }
 

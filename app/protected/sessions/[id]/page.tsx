@@ -144,16 +144,21 @@ export default function ViewSession() {
     const durationMinutes = Math.floor(durationMs / (1000 * 60));
     const durationSeconds = Math.floor((durationMs % (1000 * 60)) / 1000);
 
-    // Group exercises
+    // Group exercises - use a unique key that includes exercise ID
     const exerciseGroups = sessionExercises.reduce((groups, exercise) => {
       const exerciseName = exercise.exercise.name;
-      if (!groups[exerciseName]) {
-        groups[exerciseName] = {
+      const exerciseId = exercise.exercise.id;
+
+      // Use a consistent key for grouping
+      const groupKey = exerciseId;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
           exerciseName,
-          exerciseId: exercise.exercise.id,
+          exerciseId,
           category: exercise.exercise.category?.name || "Uncategorized",
           sets: [],
-          totalVolume: 0, // Track total volume for this exercise
+          totalVolume: 0,
         };
       }
 
@@ -161,16 +166,26 @@ export default function ViewSession() {
       const reps = exercise.reps || 0;
       const setVolume = weight * reps;
 
-      groups[exerciseName].totalVolume += setVolume;
-      groups[exerciseName].sets.push({
+      // Add this set to the exercise group - ensure each set gets added
+      groups[groupKey].totalVolume += setVolume;
+
+      // Make sure to add each individual set record
+      groups[groupKey].sets.push({
         setNumber: exercise.set_number,
         reps,
         weight,
         volume: setVolume,
+        // Add unique ID to ensure we don't lose sets with same set_number
+        id: exercise.id,
       });
 
       return groups;
     }, {});
+
+    // Sort sets by set_number for each exercise
+    Object.values(exerciseGroups).forEach((group: any) => {
+      group.sets.sort((a: any, b: any) => a.setNumber - b.setNumber);
+    });
 
     return { durationMinutes, durationSeconds, exerciseGroups };
   };
@@ -507,15 +522,12 @@ export default function ViewSession() {
                       {/* Updated to show only the number value without unit */}
                       <TableCell className="py-2">
                         {set.weight
-                          ? (useMetric
-                              ? set.weight
-                              : set.weight * 2.20462
-                            ).toFixed(1)
+                          ? displayWeight(set.weight, useMetric, false) // Use a function that handles unit conversion properly
                           : "-"}
                       </TableCell>
                       <TableCell className="py-2 hidden sm:table-cell">
                         {set.volume > 0
-                          ? displayWeight(set.volume, useMetric)
+                          ? displayWeight(set.volume, useMetric, false)
                           : "-"}
                       </TableCell>
                     </TableRow>
