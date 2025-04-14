@@ -13,95 +13,22 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function ActiveSessionBanner() {
-  // Get session from context
+  // Get session from context - this is now our only source of truth
   const { activeSession, endSession } = useSession();
 
   // Local state
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [shouldRender, setShouldRender] = useState(false);
 
-  // Check actual localStorage state directly
-  const verifyActiveSession = () => {
-    if (typeof window === "undefined") return false;
-
-    try {
-      const rawData = localStorage.getItem("fitflow-active-session");
-
-      // If no data in localStorage, no active session
-      if (!rawData) return false;
-
-      // Try to parse the data
-      const sessionData = JSON.parse(rawData);
-
-      // Verify the session data has required fields
-      return !!(
-        sessionData &&
-        sessionData.workoutId &&
-        sessionData.workoutName &&
-        sessionData.startTime
-      );
-    } catch (e) {
-      console.error("Error verifying active session:", e);
-      // If there's an error, clean up localStorage
-      localStorage.removeItem("fitflow-active-session");
-      return false;
-    }
-  };
-
-  // Set client-side flag and do initial verification
+  // Mark as client-side rendered
   useEffect(() => {
     setIsClient(true);
-
-    // Initial verification of localStorage data
-    const hasValidSession = verifyActiveSession();
-    setShouldRender(hasValidSession);
-
-    // Listen for storage events from other components/tabs
-    const handleStorageChange = () => {
-      const hasSession = verifyActiveSession();
-      setShouldRender(hasSession);
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("session-ended", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("session-ended", handleStorageChange);
-    };
   }, []);
-
-  // Re-verify whenever activeSession context changes
-  useEffect(() => {
-    if (isClient) {
-      const hasValidSession = verifyActiveSession();
-
-      // If context says there's a session but localStorage says no, don't render
-      if (activeSession && !hasValidSession) {
-        console.log(
-          "Context has session but localStorage doesn't - skipping render"
-        );
-        setShouldRender(false);
-      } else if (!activeSession && hasValidSession) {
-        // If localStorage has session but context doesn't, clean up localStorage
-        console.log(
-          "Inconsistency: localStorage has session but context doesn't"
-        );
-        localStorage.removeItem("fitflow-active-session");
-        setShouldRender(false);
-      } else {
-        setShouldRender(!!activeSession && hasValidSession);
-      }
-    }
-  }, [activeSession, isClient]);
 
   // Calculate and update elapsed time
   useEffect(() => {
-    if (!shouldRender || !activeSession || !isClient) {
-      return;
-    }
+    if (!activeSession || !isClient) return;
 
     const calculateElapsed = () => {
       if (!activeSession?.startTime) return 0;
@@ -122,35 +49,16 @@ export default function ActiveSessionBanner() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [activeSession, isClient, shouldRender]);
+  }, [activeSession, isClient]);
 
-  // Enhanced endSession to ensure complete cleanup
+  // Handle ending session
   const handleEndSession = () => {
-    console.log("Ending session via banner");
-
-    // Use the context's endSession
     endSession();
-
-    // Extra cleanup for redundancy
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem("fitflow-active-session");
-        window.dispatchEvent(new Event("storage"));
-      } catch (e) {
-        console.error("Error during cleanup:", e);
-      }
-    }
-
-    // Force our component to update
-    setShouldRender(false);
     setShowEndConfirmation(false);
   };
 
-  // Don't render during SSR
-  if (!isClient) return null;
-
-  // Don't render if we've determined we shouldn't
-  if (!shouldRender) return null;
+  // Don't render during SSR or if no active session
+  if (!isClient || !activeSession) return null;
 
   return (
     <div className="bg-amber-100 dark:bg-amber-900 border-l-4 border-amber-500 p-4 mb-4 shadow-md">
@@ -199,7 +107,6 @@ export default function ActiveSessionBanner() {
           onPress={() => {
             localStorage.removeItem("fitflow-active-session");
             endSession();
-            setShouldRender(false);
             window.location.reload();
           }}
         >

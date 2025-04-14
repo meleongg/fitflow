@@ -59,18 +59,29 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     null
   );
 
-  // Make sure we're properly loading from localStorage on mount
+  // Load from localStorage on mount only
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (savedSession) {
-      try {
-        setActiveSession(JSON.parse(savedSession));
-      } catch (e) {
-        console.error("Error parsing saved session:", e);
-        localStorage.removeItem(SESSION_STORAGE_KEY);
+    try {
+      const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (savedSession) {
+        const parsedSession = JSON.parse(savedSession);
+        // Validate session data
+        if (
+          parsedSession &&
+          parsedSession.workoutId &&
+          parsedSession.workoutName
+        ) {
+          setActiveSession(parsedSession);
+        } else {
+          // Invalid data, clear it
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
       }
+    } catch (e) {
+      console.error("Error loading session:", e);
+      localStorage.removeItem(SESSION_STORAGE_KEY);
     }
   }, []);
 
@@ -105,7 +116,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       exercises: SessionExercise[];
     };
   }) => {
-    // Use the provided started_at time to ensure consistency with the UI
+    // Create the session object
     const newSession: ActiveSession = {
       id: session.user_id,
       workoutId: session.workout_id,
@@ -116,11 +127,10 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       },
     };
 
-    // Clear any existing session first
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-
-    // Set the new session
+    // Update state first
     setActiveSession(newSession);
+
+    // Then persist to localStorage
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newSession));
   };
 
@@ -135,7 +145,10 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       },
     };
 
+    // Update state first
     setActiveSession(updatedSession);
+
+    // Then persist to localStorage
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSession));
   };
 
