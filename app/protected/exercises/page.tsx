@@ -584,14 +584,23 @@ export default function ExerciseLibraryPage() {
         )}
       </div>
 
-      {/* Add/Edit Exercise Modal */}
+      {/* Add/Edit Exercise Modal - Updated for mobile */}
       <Modal
         isOpen={isOpen}
         onClose={() => {
           if (!isSaving) onClose();
         }}
-        placement="center"
+        placement="top" // Changed from center to top
         scrollBehavior="inside"
+        classNames={{
+          base: "max-w-[95%] sm:max-w-md mx-auto max-h-[80vh]", // Add max height
+          wrapper: "items-start sm:items-center justify-center p-2 pt-8", // Position better on mobile
+          header:
+            "pb-0 border-b border-default-200 sticky top-0 z-10 bg-background", // Make header sticky
+          body: "p-4 overflow-auto pb-12", // Add bottom padding for keyboard space
+          footer:
+            "pt-3 px-6 pb-5 flex flex-row gap-3 justify-end sticky bottom-0 z-10 bg-background border-t border-default-200", // Make footer sticky
+        }}
       >
         <ModalContent className="max-w-md mx-auto">
           {(onClose) => (

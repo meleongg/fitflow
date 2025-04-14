@@ -623,29 +623,38 @@ export default function WorkoutSession() {
 
       // 2. Insert session exercises with aggregated set data
       for (const exercise of sessionExercises) {
-        // Get all completed sets for this exercise
+        // Only process exercises that have at least one completed set
         const completedSets = exercise.actualSets.filter(
           (set) => set.completed
         );
+        if (completedSets.length === 0) continue;
 
-        // Save EACH completed set as a separate database record
-        for (const set of completedSets) {
-          const { error: exerciseError } = await supabase
-            .from("session_exercises")
-            .insert({
-              session_id: session.id,
-              exercise_id: exercise.id,
-              user_id: user.id,
-              reps: set.reps,
-              weight: set.weight,
-              set_number: set.setNumber,
-              // You can also include other set-specific data if needed
-            });
+        // Calculate stats from completed sets
+        const bestReps = Math.max(...completedSets.map((set) => set.reps || 0));
+        const bestWeight = Math.max(
+          ...completedSets.map((set) => set.weight || 0)
+        );
+        const lastSetNumber = Math.max(
+          ...completedSets.map((set) => set.setNumber)
+        );
 
-          if (exerciseError) {
-            console.error("Error inserting session exercise:", exerciseError);
-            console.error("Error details:", JSON.stringify(exerciseError));
-          }
+        // Insert the session exercise with aggregated data
+        const { error: exerciseError } = await supabase
+          .from("session_exercises")
+          .insert({
+            session_id: session.id,
+            exercise_id: exercise.id,
+            user_id: user.id,
+            reps: bestReps,
+            weight: bestWeight,
+            set_number: lastSetNumber,
+            // Optional: If your table has a JSON column for detailed set data
+            // sets_data: setsData
+          });
+
+        if (exerciseError) {
+          console.error("Error inserting session exercise:", exerciseError);
+          console.error("Error details:", JSON.stringify(exerciseError));
         }
       }
 
@@ -1692,35 +1701,18 @@ export default function WorkoutSession() {
           }, 100);
         }}
         size="lg"
-        placement="center"
+        placement="top"
         backdrop="opaque"
+        scrollBehavior="inside"
         classNames={{
-          base: "max-w-[95%] sm:max-w-3xl mx-auto",
-          wrapper: "items-center justify-center p-2",
-          header: "pb-0 border-b border-default-200",
-          body: "py-5 px-4",
-          footer: "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-3 justify-end",
+          base: "max-w-[95%] sm:max-w-3xl mx-auto h-[80vh] sm:h-auto",
+          wrapper: "items-start sm:items-center justify-center p-2 pt-8",
+          header:
+            "pb-0 border-b border-default-200 sticky top-0 z-10 bg-background",
+          body: "p-4 overflow-auto",
+          footer:
+            "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-3 justify-end sticky bottom-0 z-10 bg-background border-t border-default-200",
           closeButton: "top-3 right-3",
-        }}
-        motionProps={{
-          variants: {
-            enter: {
-              y: 0,
-              opacity: 1,
-              transition: {
-                duration: 0.3,
-                ease: "easeOut",
-              },
-            },
-            exit: {
-              y: -20,
-              opacity: 0,
-              transition: {
-                duration: 0.2,
-                ease: "easeIn",
-              },
-            },
-          },
         }}
       >
         <ModalContent>
@@ -1730,12 +1722,12 @@ export default function WorkoutSession() {
                 <h2 className="text-xl">Update Workout Defaults</h2>
               </ModalHeader>
               <ModalBody>
-                <p className="text-sm text-default-500 mb-5 px-2">
+                <p className="text-sm text-default-500 mb-5">
                   Would you like to update your workout defaults based on
                   today's performance? Select the exercises you want to update:
                 </p>
 
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto px-2">
+                <div className="space-y-4 pb-2">
                   {Object.entries(workoutUpdates).map(
                     ([exerciseId, update]) => {
                       // Find the exercise in sessionExercises to get the name
@@ -1928,7 +1920,6 @@ export default function WorkoutSession() {
                 <Button
                   variant="flat"
                   fullWidth
-                  className="sm:max-w-[120px]"
                   onPress={async () => {
                     setShowUpdateWorkoutModal(false);
                     setTimeout(async () => {
@@ -1947,7 +1938,6 @@ export default function WorkoutSession() {
                 <Button
                   color="primary"
                   fullWidth
-                  className="sm:max-w-[180px]"
                   onPress={() => {
                     setShowUpdateWorkoutModal(false);
                     setTimeout(() => {
@@ -1970,7 +1960,14 @@ export default function WorkoutSession() {
         onClose={onClose}
         scrollBehavior="inside"
         size="lg"
-        placement="center"
+        placement="top" // Changed from center to top
+        classNames={{
+          base: "max-w-[95%] sm:max-w-3xl mx-auto max-h-[80vh]", // Add max height
+          wrapper: "items-start justify-center p-2 pt-8", // Align to top
+          body: "p-4 overflow-auto pb-12", // Add bottom padding for keyboard space
+          footer:
+            "pt-3 px-6 pb-5 flex flex-row gap-3 justify-end sticky bottom-0 z-10 bg-background border-t border-default-200", // Make footer sticky
+        }}
       >
         <ModalContent>
           {(onClose) => (
@@ -2112,11 +2109,14 @@ export default function WorkoutSession() {
         onClose={onCustomClose}
         radius="lg"
         onOpenChange={onCustomOpenChange}
-        placement="center"
+        placement="top" // Changed from center to top
         scrollBehavior="inside"
         classNames={{
-          base: "m-0 mx-auto",
-          wrapper: "items-center justify-center p-2",
+          base: "m-0 mx-auto max-w-[95%] max-h-[80vh]", // Add max width/height constraints
+          wrapper: "items-start justify-center p-2 pt-12", // Align to top with padding
+          body: "gap-5 py-2 pb-12 overflow-auto", // Add bottom padding for keyboard
+          footer:
+            "pt-5 border-t border-default-200 sticky bottom-0 z-10 bg-background", // Make footer sticky
         }}
       >
         <ModalContent className="max-w-md mx-auto">

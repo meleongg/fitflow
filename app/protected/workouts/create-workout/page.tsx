@@ -928,11 +928,16 @@ const CreateWorkoutPage = () => {
               onClose={onClose}
               radius="lg"
               onOpenChange={onOpenChange}
-              placement="center" // Add this for proper positioning
-              scrollBehavior="inside" // Better scrolling on mobile
+              placement="top" // Changed from center to top
+              scrollBehavior="inside"
               classNames={{
-                base: "m-0 mx-auto", // Center the modal
-                wrapper: "items-center justify-center p-2", // Ensure wrapper is centered with padding
+                base: "max-w-[95%] sm:max-w-md mx-auto max-h-[80vh]", // Add max height
+                wrapper: "items-start justify-center p-2 pt-8", // Align to top
+                header:
+                  "pb-0 border-b border-default-200 sticky top-0 z-10 bg-background", // Make header sticky
+                body: "p-4 overflow-auto pb-12", // Add bottom padding for keyboard space
+                footer:
+                  "pt-3 px-6 pb-5 flex flex-row gap-3 justify-end sticky bottom-0 z-10 bg-background border-t border-default-200", // Make footer sticky
               }}
             >
               <ModalContent className="max-w-[95vw] sm:max-w-md">
@@ -1094,11 +1099,16 @@ const CreateWorkoutPage = () => {
               onClose={onCustomClose}
               radius="lg"
               onOpenChange={onCustomOpenChange}
-              placement="center"
+              placement="top" // Changed from center to top
               scrollBehavior="inside"
               classNames={{
-                base: "m-0 mx-auto",
-                wrapper: "items-center justify-center p-2",
+                base: "max-w-[95%] sm:max-w-md mx-auto max-h-[80vh]", // Add max height
+                wrapper: "items-start justify-center p-2 pt-8", // Align to top
+                header:
+                  "pb-0 border-b border-default-200 sticky top-0 z-10 bg-background", // Make header sticky
+                body: "p-4 overflow-auto pb-12", // Add bottom padding for keyboard
+                footer:
+                  "pt-3 px-6 pb-5 flex flex-row gap-3 justify-end sticky bottom-0 z-10 bg-background border-t border-default-200", // Make footer sticky
               }}
             >
               <ModalContent className="max-w-md mx-auto">
@@ -1259,10 +1269,16 @@ const CreateWorkoutPage = () => {
             onDeleteClose();
           }}
           radius="lg"
-          placement="center"
+          placement="top" // Changed from center to top
+          scrollBehavior="inside"
           classNames={{
-            base: "m-0 mx-auto",
-            wrapper: "items-center justify-center p-2",
+            base: "max-w-[95%] sm:max-w-md mx-auto max-h-[80vh]", // Add max height
+            wrapper: "items-start justify-center p-2 pt-8", // Align to top
+            header:
+              "pb-0 border-b border-default-200 sticky top-0 z-10 bg-background", // Make header sticky
+            body: "p-4 overflow-auto", // No need for extra padding in this simple modal
+            footer:
+              "pt-3 px-6 pb-5 flex flex-row gap-3 justify-end sticky bottom-0 z-10 bg-background border-t border-default-200", // Make footer sticky
           }}
         >
           <ModalContent>
