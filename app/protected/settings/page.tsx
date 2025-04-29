@@ -414,7 +414,168 @@ export default function SettingsPage() {
               <span>Account</span>
             </div>
           }
-        />
+        >
+          {/* Account settings content goes directly inside the Tab */}
+          <div className="space-y-6 w-full py-3">
+            {/* Profile Information Card */}
+            <Card className="shadow-sm hover:shadow transition-shadow">
+              <CardHeader className="flex flex-col items-start">
+                <h3 className="text-lg font-bold">Profile Information</h3>
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-6 px-4 md:px-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-500">Email Address</p>
+                    <p className="font-medium">{userProfile?.email}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-500">Account Created</p>
+                    <p className="font-medium">
+                      {userProfile?.created_at
+                        ? new Date(userProfile.created_at).toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    color="danger"
+                    variant="light"
+                    startContent={<LogOut size={16} />}
+                    onPress={signOut}
+                    className="h-10"
+                  >
+                    Sign Out
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Update Email Card */}
+            <Card className="shadow-sm hover:shadow transition-shadow">
+              <CardHeader className="flex flex-col items-start">
+                <h3 className="text-lg font-bold">Update Email</h3>
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-5 px-4 md:px-6">
+                <Input
+                  label="New Email Address"
+                  placeholder="Enter your new email address"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  startContent={<Mail size={16} className="text-default-400" />}
+                  classNames={{
+                    inputWrapper: "h-12",
+                  }}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    color="primary"
+                    isLoading={isSaving}
+                    startContent={<Save size={16} />}
+                    onPress={updateEmail}
+                    className="h-10 w-full sm:w-auto"
+                  >
+                    Update Email
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Change Password Card - Enhanced for better spacing */}
+            <Card className="shadow-sm hover:shadow transition-shadow">
+              <CardHeader className="flex flex-col items-start">
+                <h3 className="text-lg font-bold">Change Password</h3>
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-5 px-4 md:px-6">
+                <Input
+                  label="Current Password"
+                  placeholder="Enter your current password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  startContent={<Key size={16} className="text-default-400" />}
+                  classNames={{
+                    inputWrapper: "h-12",
+                  }}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="New Password"
+                    placeholder="Enter your new password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    classNames={{
+                      inputWrapper: "h-12",
+                    }}
+                  />
+                  <Input
+                    label="Confirm New Password"
+                    placeholder="Confirm your new password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    classNames={{
+                      inputWrapper: "h-12",
+                    }}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    color="primary"
+                    isLoading={isSaving}
+                    startContent={<Save size={16} />}
+                    onPress={updatePassword}
+                    className="h-10 w-full sm:w-auto"
+                  >
+                    Update Password
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Delete Account Card with improved danger styling */}
+            <Card className="shadow-sm hover:shadow-md border border-danger-200 transition-all">
+              <CardHeader className="flex flex-col items-start">
+                <div className="flex items-center gap-2 text-danger">
+                  <AlertTriangle size={18} />
+                  <h3 className="text-lg font-bold">Delete Account</h3>
+                </div>
+                <p className="text-small text-default-500">
+                  This action cannot be undone. All your data will be
+                  permanently deleted.
+                </p>
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-5 px-4 md:px-6">
+                <Input
+                  label="Confirm by typing your email"
+                  placeholder="Enter your email to confirm"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  color="danger"
+                  startContent={<Trash2 size={16} className="text-danger" />}
+                  classNames={{
+                    inputWrapper: "h-12",
+                  }}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    color="danger"
+                    onPress={onOpen}
+                    isDisabled={deleteConfirm !== userProfile?.email}
+                    className="h-10 w-full sm:w-auto"
+                  >
+                    Delete My Account
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        </Tab>
         <Tab
           key="preferences"
           title={
@@ -423,316 +584,154 @@ export default function SettingsPage() {
               <span>Preferences</span>
             </div>
           }
-        />
-      </Tabs>
-
-      {/* Account Settings */}
-      {activeTab === "account" && (
-        <div className="space-y-6 w-full">
-          {/* Profile Information Card */}
-          <Card className="shadow-sm hover:shadow transition-shadow">
-            <CardHeader className="flex flex-col items-start">
-              <h3 className="text-lg font-bold">Profile Information</h3>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-6 px-4 md:px-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500">Email Address</p>
-                  <p className="font-medium">{userProfile?.email}</p>
+        >
+          {/* Preferences content goes directly inside the Tab */}
+          <div className="space-y-6 w-full py-3">
+            {/* Display Preferences Card */}
+            <Card className="shadow-sm hover:shadow transition-shadow">
+              <CardHeader className="flex flex-col items-start">
+                <h3 className="text-lg font-bold">Display Preferences</h3>
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-8 px-4 md:px-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div className="space-y-1">
+                    <p className="font-medium">Weight Units</p>
+                    <p className="text-sm text-gray-500">
+                      Choose between metric (kg) and imperial (lbs)
+                    </p>
+                  </div>
+                  <Switch
+                    size="lg"
+                    color="primary"
+                    startContent={<span className="text-sm">lbs</span>}
+                    endContent={<span className="text-sm">kg</span>}
+                    isSelected={preferences.useMetric}
+                    onValueChange={(isSelected) =>
+                      setPreferences({ ...preferences, useMetric: isSelected })
+                    }
+                    thumbIcon={({ isSelected, className }) =>
+                      isSelected ? (
+                        <Weight className={className} size={14} />
+                      ) : (
+                        <Weight className={className} size={14} />
+                      )
+                    }
+                    className="self-start sm:self-center"
+                  />
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500">Account Created</p>
-                  <p className="font-medium">
-                    {userProfile?.created_at
-                      ? new Date(userProfile.created_at).toLocaleDateString()
-                      : "N/A"}
+
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div className="space-y-1">
+                    <p className="font-medium">Theme</p>
+                    <p className="text-sm text-gray-500">
+                      Choose between light and dark mode
+                    </p>
+                  </div>
+                  <Switch
+                    size="lg"
+                    color="primary"
+                    startContent={<Sun size={18} />}
+                    endContent={<Moon size={18} />}
+                    isSelected={preferences.useDarkMode}
+                    onValueChange={(isSelected) => {
+                      // Apply theme change immediately
+                      setTheme(isSelected ? "dark" : "light");
+                      // Then update preferences state
+                      setPreferences({
+                        ...preferences,
+                        useDarkMode: isSelected,
+                      });
+
+                      // Add a subtle toast notification
+                      toast.success(
+                        `${isSelected ? "Dark" : "Light"} theme activated`,
+                        {
+                          duration: 2000,
+                          icon: isSelected ? (
+                            <Moon size={16} />
+                          ) : (
+                            <Sun size={16} />
+                          ),
+                        }
+                      );
+                    }}
+                    className="self-start sm:self-center"
+                  />
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Workout Preferences Card */}
+            <Card className="shadow-sm hover:shadow transition-shadow">
+              <CardHeader className="flex flex-col items-start">
+                <h3 className="text-lg font-bold">Workout Preferences</h3>
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-8 px-4 md:px-6">
+                <div className="flex flex-col space-y-2">
+                  <p className="font-medium">Workout Time Estimation</p>
+                  <p className="text-sm text-gray-500 mb-2">
+                    Set your typical rest duration between sets. This helps
+                    calculate more accurate workout time estimates.
                   </p>
+                  <Select
+                    label="Rest Duration"
+                    selectedKeys={[preferences.defaultRestTimer.toString()]}
+                    onChange={(e) =>
+                      setPreferences({
+                        ...preferences,
+                        defaultRestTimer: parseInt(e.target.value),
+                      })
+                    }
+                    startContent={
+                      <Clock size={16} className="text-default-400" />
+                    }
+                    classNames={{
+                      trigger: "h-12",
+                      value: "text-base",
+                    }}
+                    className="max-w-md"
+                  >
+                    <SelectItem key="30" value="30">
+                      30 seconds
+                    </SelectItem>
+                    <SelectItem key="45" value="45">
+                      45 seconds
+                    </SelectItem>
+                    <SelectItem key="60" value="60">
+                      60 seconds
+                    </SelectItem>
+                    <SelectItem key="90" value="90">
+                      90 seconds
+                    </SelectItem>
+                    <SelectItem key="120" value="120">
+                      2 minutes
+                    </SelectItem>
+                    <SelectItem key="180" value="180">
+                      3 minutes
+                    </SelectItem>
+                  </Select>
                 </div>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  color="danger"
-                  variant="light"
-                  startContent={<LogOut size={16} />}
-                  onPress={signOut}
-                  className="h-10"
-                >
-                  Sign Out
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
+              </CardBody>
+            </Card>
 
-          {/* Update Email Card */}
-          <Card className="shadow-sm hover:shadow transition-shadow">
-            <CardHeader className="flex flex-col items-start">
-              <h3 className="text-lg font-bold">Update Email</h3>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-5 px-4 md:px-6">
-              <Input
-                label="New Email Address"
-                placeholder="Enter your new email address"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                startContent={<Mail size={16} className="text-default-400" />}
-                classNames={{
-                  inputWrapper: "h-12",
-                }}
-              />
-              <div className="flex justify-end">
-                <Button
-                  color="primary"
-                  isLoading={isSaving}
-                  startContent={<Save size={16} />}
-                  onPress={updateEmail}
-                  className="h-10 w-full sm:w-auto"
-                >
-                  Update Email
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Change Password Card - Enhanced for better spacing */}
-          <Card className="shadow-sm hover:shadow transition-shadow">
-            <CardHeader className="flex flex-col items-start">
-              <h3 className="text-lg font-bold">Change Password</h3>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-5 px-4 md:px-6">
-              <Input
-                label="Current Password"
-                placeholder="Enter your current password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                startContent={<Key size={16} className="text-default-400" />}
-                classNames={{
-                  inputWrapper: "h-12",
-                }}
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="New Password"
-                  placeholder="Enter your new password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  classNames={{
-                    inputWrapper: "h-12",
-                  }}
-                />
-                <Input
-                  label="Confirm New Password"
-                  placeholder="Confirm your new password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  classNames={{
-                    inputWrapper: "h-12",
-                  }}
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  color="primary"
-                  isLoading={isSaving}
-                  startContent={<Save size={16} />}
-                  onPress={updatePassword}
-                  className="h-10 w-full sm:w-auto"
-                >
-                  Update Password
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Delete Account Card with improved danger styling */}
-          <Card className="shadow-sm hover:shadow-md border border-danger-200 transition-all">
-            <CardHeader className="flex flex-col items-start">
-              <div className="flex items-center gap-2 text-danger">
-                <AlertTriangle size={18} />
-                <h3 className="text-lg font-bold">Delete Account</h3>
-              </div>
-              <p className="text-small text-default-500">
-                This action cannot be undone. All your data will be permanently
-                deleted.
-              </p>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-5 px-4 md:px-6">
-              <Input
-                label="Confirm by typing your email"
-                placeholder="Enter your email to confirm"
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                color="danger"
-                startContent={<Trash2 size={16} className="text-danger" />}
-                classNames={{
-                  inputWrapper: "h-12",
-                }}
-              />
-              <div className="flex justify-end">
-                <Button
-                  color="danger"
-                  onPress={onOpen}
-                  isDisabled={deleteConfirm !== userProfile?.email}
-                  className="h-10 w-full sm:w-auto"
-                >
-                  Delete My Account
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {/* Preferences - Enhanced for better mobile and desktop experience */}
-      {activeTab === "preferences" && (
-        <div className="space-y-6 w-full">
-          {/* Display Preferences Card */}
-          <Card className="shadow-sm hover:shadow transition-shadow">
-            <CardHeader className="flex flex-col items-start">
-              <h3 className="text-lg font-bold">Display Preferences</h3>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-8 px-4 md:px-6">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <div className="space-y-1">
-                  <p className="font-medium">Weight Units</p>
-                  <p className="text-sm text-gray-500">
-                    Choose between metric (kg) and imperial (lbs)
-                  </p>
-                </div>
-                <Switch
-                  size="lg"
-                  color="primary"
-                  startContent={<span className="text-sm">lbs</span>}
-                  endContent={<span className="text-sm">kg</span>}
-                  isSelected={preferences.useMetric}
-                  onValueChange={(isSelected) =>
-                    setPreferences({ ...preferences, useMetric: isSelected })
-                  }
-                  thumbIcon={({ isSelected, className }) =>
-                    isSelected ? (
-                      <Weight className={className} size={14} />
-                    ) : (
-                      <Weight className={className} size={14} />
-                    )
-                  }
-                  className="self-start sm:self-center"
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <div className="space-y-1">
-                  <p className="font-medium">Theme</p>
-                  <p className="text-sm text-gray-500">
-                    Choose between light and dark mode
-                  </p>
-                </div>
-                <Switch
-                  size="lg"
-                  color="primary"
-                  startContent={<Sun size={18} />}
-                  endContent={<Moon size={18} />}
-                  isSelected={preferences.useDarkMode}
-                  onValueChange={(isSelected) => {
-                    // Apply theme change immediately
-                    setTheme(isSelected ? "dark" : "light");
-                    // Then update preferences state
-                    setPreferences({ ...preferences, useDarkMode: isSelected });
-
-                    // Add a subtle toast notification
-                    toast.success(
-                      `${isSelected ? "Dark" : "Light"} theme activated`,
-                      {
-                        duration: 2000,
-                        icon: isSelected ? (
-                          <Moon size={16} />
-                        ) : (
-                          <Sun size={16} />
-                        ),
-                      }
-                    );
-                  }}
-                  className="self-start sm:self-center"
-                />
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Workout Preferences Card */}
-          <Card className="shadow-sm hover:shadow transition-shadow">
-            <CardHeader className="flex flex-col items-start">
-              <h3 className="text-lg font-bold">Workout Preferences</h3>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-8 px-4 md:px-6">
-              <div className="flex flex-col space-y-2">
-                <p className="font-medium">Workout Time Estimation</p>
-                <p className="text-sm text-gray-500 mb-2">
-                  Set your typical rest duration between sets. This helps
-                  calculate more accurate workout time estimates.
-                </p>
-                <Select
-                  label="Rest Duration"
-                  selectedKeys={[preferences.defaultRestTimer.toString()]}
-                  onChange={(e) =>
-                    setPreferences({
-                      ...preferences,
-                      defaultRestTimer: parseInt(e.target.value),
-                    })
-                  }
-                  startContent={
-                    <Clock size={16} className="text-default-400" />
-                  }
-                  classNames={{
-                    trigger: "h-12",
-                    value: "text-base",
-                  }}
-                  className="max-w-md"
-                >
-                  <SelectItem key="30" value="30">
-                    30 seconds
-                  </SelectItem>
-                  <SelectItem key="45" value="45">
-                    45 seconds
-                  </SelectItem>
-                  <SelectItem key="60" value="60">
-                    60 seconds
-                  </SelectItem>
-                  <SelectItem key="90" value="90">
-                    90 seconds
-                  </SelectItem>
-                  <SelectItem key="120" value="120">
-                    2 minutes
-                  </SelectItem>
-                  <SelectItem key="180" value="180">
-                    3 minutes
-                  </SelectItem>
-                </Select>
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Save Button - Better positioning for mobile */}
-          <div className="flex justify-end sticky bottom-4 pt-2">
-            <Button
-              color="primary"
-              isLoading={isSaving}
-              onPress={savePreferences}
-              startContent={<Save size={16} />}
-              className="w-full sm:w-auto h-12 shadow-md"
-              size="lg"
-            >
-              Save Preferences
-            </Button>
+            {/* Save Button - Better positioning for mobile */}
+            <div className="flex justify-end sticky bottom-4 pt-2">
+              <Button
+                color="primary"
+                isLoading={isSaving}
+                onPress={savePreferences}
+                startContent={<Save size={16} />}
+                className="w-full sm:w-auto h-12 shadow-md"
+                size="lg"
+              >
+                Save Preferences
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        </Tab>
+      </Tabs>
 
       {/* Add global styles for animations and mobile optimizations */}
       <style jsx global>{`
