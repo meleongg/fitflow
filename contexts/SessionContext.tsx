@@ -5,6 +5,7 @@ import {
   ReactNode,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -28,7 +29,7 @@ interface ActiveSession {
   workoutName: string;
   startTime: string;
   progress?: {
-    exercises: SessionExercise[]; // Properly type exercises
+    exercises: SessionExercise[];
   };
 }
 
@@ -45,19 +46,21 @@ interface SessionContextProps {
   }) => void;
   updateSessionProgress: (exercises: SessionExercise[]) => void;
   endSession: () => void;
-  getElapsedMinutes: () => number; // Add function to calculate elapsed time in minutes
+  getElapsedMinutes: () => number;
 }
 
 const SessionContext = createContext<SessionContextProps | undefined>(
   undefined
 );
 
-const SESSION_STORAGE_KEY = "fitflow-active-session";
+export const SESSION_STORAGE_KEY = "fitflow-active-session";
 
 export const SessionProvider = ({ children }: { children: ReactNode }) => {
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(
     null
   );
+  const [isEnding, setIsEnding] = useState(false);
+  const endTimeRef = useRef<number | null>(null);
 
   // Load from localStorage on mount only
   useEffect(() => {
@@ -116,6 +119,14 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       exercises: SessionExercise[];
     };
   }) => {
+    // Add a cooldown check to prevent accidental reactivation
+    if (
+      isEnding ||
+      (endTimeRef.current && Date.now() - endTimeRef.current < 5000)
+    ) {
+      return; // Don't allow session start during cooldown
+    }
+
     // Create the session object
     const newSession: ActiveSession = {
       id: session.user_id,
@@ -165,57 +176,22 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
 
   // Update the endSession function to be more thorough
   const endSession = () => {
-    console.log("SessionContext - Ending session, current state:", {
-      contextSession: activeSession,
-      localStorage:
-        typeof window !== "undefined"
-          ? localStorage.getItem(SESSION_STORAGE_KEY)
-          : null,
-    });
+    // Set cooldown flag
+    setIsEnding(true);
+    endTimeRef.current = Date.now();
 
     // Clear React state
     setActiveSession(null);
 
     if (typeof window !== "undefined") {
       try {
-        // Clear known session-related keys
-        const keysToRemove = [
-          SESSION_STORAGE_KEY,
-          "fitflow-active-session",
-          "active-session",
-          "activeWorkoutSession",
-          "workout-session",
-        ];
+        // Clear localStorage
+        localStorage.removeItem(SESSION_STORAGE_KEY);
 
-        // Remove each key
-        keysToRemove.forEach((key) => {
-          try {
-            // First set to empty (sometimes helps with browser quirks)
-            localStorage.setItem(key, "");
-            // Then remove
-            localStorage.removeItem(key);
-
-            console.log(`Removed localStorage key: ${key}`);
-          } catch (e) {
-            console.error(`Error removing ${key}:`, e);
-          }
-        });
-
-        // Verify removal was successful
-        const remainingData = localStorage.getItem(SESSION_STORAGE_KEY);
-        if (remainingData) {
-          console.warn(
-            "Session data still exists after removal, trying again..."
-          );
-          localStorage.setItem(SESSION_STORAGE_KEY, "");
-          localStorage.removeItem(SESSION_STORAGE_KEY);
-        }
-
-        // Dispatch events to ensure components update
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("session-ended"));
-
-        console.log("SessionContext - Session cleanup complete");
+        // Reset cooldown flag after 5 seconds
+        setTimeout(() => {
+          setIsEnding(false);
+        }, 5000);
       } catch (error) {
         console.error("Error during session cleanup:", error);
       }

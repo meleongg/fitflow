@@ -257,6 +257,11 @@ export default function WorkoutSession() {
       // Set state for display purposes
       setSessionStartTime(timestamp);
 
+      console.log(
+        "Starting session with timestamp: from session page",
+        timestamp
+      );
+
       // Use the same timestamp directly in the startSession call
       startSession({
         user_id: user.id,
@@ -652,22 +657,12 @@ export default function WorkoutSession() {
 
       // After successful session submission
       endSession();
-
-      // Direct localStorage cleanup as an extra safeguard
-      if (typeof window !== "undefined") {
-        // Clear all session-related localStorage items
-        localStorage.removeItem("fitflow-active-session");
-        localStorage.removeItem("workout-timer-state");
-
-        console.log("Session cleanup complete");
-      }
-
+      console.log("endSession called from finalizeSession");
       toast.success("Session completed!");
 
       // Use window.location.href with replace() instead of router.push
       // This forces a FULL page reload instead of client-side navigation
       setTimeout(() => {
-        // The replace() method prevents going back to the current page
         window.location.replace(
           `/protected/sessions/${session.id}?ts=${Date.now()}`
         );
@@ -2384,21 +2379,14 @@ export default function WorkoutSession() {
                   onPress={() => {
                     // End the session
                     endSession();
-
-                    // Clear any local storage data
-                    if (typeof window !== "undefined") {
-                      localStorage.removeItem("fitflow-active-session");
-                      localStorage.removeItem("workout-timer-state");
-
-                      // Dispatch events to notify components
-                      window.dispatchEvent(new Event("storage"));
-                      window.dispatchEvent(new CustomEvent("session-ended"));
-                    }
-
+                    console.log("endSession called from Cancel Workout");
                     toast.info("Workout session canceled");
 
                     // Navigate back to workouts page with a full page reload
-                    window.location.href = `/protected/workouts?ts=${Date.now()}`;
+                    setTimeout(() => {
+                      toast.info("Workout session canceled");
+                      window.location.href = `/protected/workouts?ts=${Date.now()}`;
+                    }, 300);
                   }}
                 >
                   Yes, Cancel Workout

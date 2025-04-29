@@ -13,10 +13,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function ActiveSessionBanner() {
-  // Get session from context - this is now our only source of truth
   const { activeSession, endSession } = useSession();
-
-  // Local state
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -51,14 +48,23 @@ export default function ActiveSessionBanner() {
     return () => clearInterval(interval);
   }, [activeSession, isClient]);
 
-  // Handle ending session
   const handleEndSession = () => {
+    // Call context endSession
     endSession();
+
+    // Close modal
     setShowEndConfirmation(false);
+
+    // Force a full page reload to ensure clean state
+    setTimeout(() => {
+      window.location.href = window.location.pathname + "?ts=" + Date.now();
+    }, 100);
   };
 
   // Don't render during SSR or if no active session
-  if (!isClient || !activeSession) return null;
+  if (!isClient || !activeSession) {
+    return null;
+  }
 
   return (
     <div className="bg-amber-100 dark:bg-amber-900 border-l-4 border-amber-500 p-4 mb-4 shadow-md">
