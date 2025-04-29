@@ -280,13 +280,11 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="max-w-full overflow-hidden px-4">
+    <div className="flex flex-col pb-16">
       <PageTitle title="Workout History" />
 
-      {/* Stats Summary Cards with Enhanced UI */}
       <div className="mt-4 mb-8 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
         {isLoading ? (
-          // Enhanced loading skeletons
           Array(4)
             .fill(0)
             .map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
@@ -370,7 +368,7 @@ export default function SessionsPage() {
         )}
       </div>
 
-      {/* Month Filter with improved scroll behavior */}
+      {/* Month Filter */}
       <div className="relative mb-6">
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
           {isLoading ? (
@@ -402,7 +400,6 @@ export default function SessionsPage() {
       {/* Session Timeline with enhanced cards */}
       <div className="space-y-8 mb-16">
         {isLoading ? (
-          // Enhanced loading state
           <>
             {Array(3)
               .fill(0)
