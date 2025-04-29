@@ -73,6 +73,13 @@ export default function AnalyticsPage() {
         .includes(exerciseSearchTerm.toLowerCase())
   );
 
+  // Add this helper function near the top of your component
+  const getSelectedExerciseName = () => {
+    if (!selectedExercise) return "";
+    const exercise = exercises.find((ex) => ex.id === selectedExercise);
+    return exercise ? exercise.name : "";
+  };
+
   // Fetch user's exercises and session data
   useEffect(() => {
     const fetchData = async () => {
@@ -154,6 +161,19 @@ export default function AnalyticsPage() {
       }
     }
   }, [selectedExercise, activeTab]);
+
+  // Add this useEffect after your other useEffects
+  useEffect(() => {
+    // When selectedExercise changes but not from a search action
+    if (selectedExercise && !exerciseSearchTerm) {
+      const exerciseName = exercises.find(
+        (ex) => ex.id === selectedExercise
+      )?.name;
+      if (exerciseName) {
+        setExerciseSearchTerm(exerciseName);
+      }
+    }
+  }, [selectedExercise, exercises]);
 
   // Handle exercise selection with loading state
   const handleExerciseChange = (value: string) => {
@@ -515,18 +535,57 @@ export default function AnalyticsPage() {
                         setExerciseSearchTerm("");
                         setSelectedExercise(null);
                       }}
-                      aria-labelledby="exercise-search-label" // Add this
+                      aria-labelledby="exercise-search-label"
                       classNames={{
                         inputWrapper: "h-12",
                       }}
                       onFocus={() => setIsExerciseDropdownOpen(true)}
                       onBlur={() => {
+                        // Use a delay to allow for item clicks
                         setTimeout(() => setIsExerciseDropdownOpen(false), 200);
                       }}
                     />
 
-                    {/* Dropdown content remains unchanged */}
-                    {/* ... */}
+                    {/* Add the dropdown content here */}
+                    {isExerciseDropdownOpen && filteredExercises.length > 0 && (
+                      <div className="absolute z-50 mt-1 w-full bg-background border border-default-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <ul className="py-1">
+                          {filteredExercises.map((exercise) => (
+                            <li
+                              key={exercise.id}
+                              className="px-3 py-2 hover:bg-default-100 cursor-pointer flex items-center justify-between"
+                              onMouseDown={() => {
+                                // Use mouseDown instead of click to beat the onBlur timing
+                                handleExerciseChange(exercise.id);
+                                setExerciseSearchTerm(exercise.name);
+                                setIsExerciseDropdownOpen(false);
+                              }}
+                            >
+                              <div className="flex items-center">
+                                <Dumbbell
+                                  size={14}
+                                  className="mr-2 text-default-500"
+                                />
+                                <span>{exercise.name}</span>
+                              </div>
+                              {exercise.category && (
+                                <span className="text-xs text-default-400">
+                                  {exercise.category.name}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {isExerciseDropdownOpen &&
+                      exerciseSearchTerm &&
+                      filteredExercises.length === 0 && (
+                        <div className="absolute z-50 mt-1 w-full bg-background border border-default-200 rounded-lg shadow-lg p-4 text-center">
+                          <p className="text-default-500">No exercises found</p>
+                        </div>
+                      )}
                   </div>
                 </div>
 
@@ -604,7 +663,12 @@ export default function AnalyticsPage() {
                     <Card className="shadow-sm hover:shadow transition-shadow">
                       <CardHeader className="pb-0 pt-4 flex-col items-start">
                         <div className="flex items-center justify-between w-full">
-                          <p className="text-lg font-bold">Weight Progress</p>
+                          <div>
+                            <p className="text-lg font-bold">Weight Progress</p>
+                            <p className="text-small text-primary font-medium">
+                              {getSelectedExerciseName()}
+                            </p>
+                          </div>
                           <Tooltip content="Shows your maximum weight lifted for this exercise over time">
                             <Button
                               isIconOnly
@@ -676,7 +740,12 @@ export default function AnalyticsPage() {
                     <Card className="shadow-sm hover:shadow transition-shadow">
                       <CardHeader className="pb-0 pt-4 flex-col items-start">
                         <div className="flex items-center justify-between w-full">
-                          <p className="text-lg font-bold">Volume Progress</p>
+                          <div>
+                            <p className="text-lg font-bold">Volume Progress</p>
+                            <p className="text-small text-primary font-medium">
+                              {getSelectedExerciseName()}
+                            </p>
+                          </div>
                           <Tooltip content="Shows your total workout volume (weight × reps) over time">
                             <Button
                               isIconOnly
@@ -876,10 +945,26 @@ export default function AnalyticsPage() {
                           size="sm"
                           className="w-full"
                           onPress={() => {
+                            // First, find the exercise name
+                            const selectedExerciseName =
+                              exercises.find((ex) => ex.id === record.id)
+                                ?.name || record.name;
+
+                            // Update both the ID and search term to stay in sync
                             setSelectedExercise(record.id);
+                            setExerciseSearchTerm(selectedExerciseName);
                             setActiveTab("progress");
+
+                            // Optional: show a toast to confirm the action
+                            toast.info(
+                              `Viewing progress for ${selectedExerciseName}`,
+                              {
+                                duration: 2000,
+                                icon: <TrendingUp size={16} />,
+                              }
+                            );
                           }}
-                          aria-label={`View progress for ${record.name}`} // Add this
+                          aria-label={`View progress for ${record.name}`}
                           endContent={<ChevronRight size={14} />}
                         >
                           View Progress
