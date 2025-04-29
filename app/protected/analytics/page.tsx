@@ -495,7 +495,10 @@ export default function AnalyticsPage() {
               <div className="flex flex-col md:flex-row gap-4">
                 {/* Search input for exercises */}
                 <div className="md:w-1/2 space-y-2">
-                  <label className="block text-small font-medium pb-1.5">
+                  <label
+                    className="block text-small font-medium pb-1.5"
+                    id="exercise-search-label"
+                  >
                     Select Exercise
                   </label>
                   <div className="relative">
@@ -512,6 +515,7 @@ export default function AnalyticsPage() {
                         setExerciseSearchTerm("");
                         setSelectedExercise(null);
                       }}
+                      aria-labelledby="exercise-search-label" // Add this
                       classNames={{
                         inputWrapper: "h-12",
                       }}
@@ -528,13 +532,17 @@ export default function AnalyticsPage() {
 
                 {/* Timeframe selector - add a label to match the exercise selector */}
                 <div className="md:w-1/2 space-y-2">
-                  <label className="block text-small font-medium pb-1.5">
+                  <label
+                    className="block text-small font-medium pb-1.5"
+                    id="timeframe-select-label"
+                  >
                     Timeframe
                   </label>
                   <Select
                     selectedKeys={[selectedTimeframe]}
                     onChange={(e) => handleTimeframeChange(e.target.value)}
                     isDisabled={isChartLoading || !selectedExercise}
+                    aria-labelledby="timeframe-select-label" // Add this
                     classNames={{
                       trigger: "h-12",
                       value: "text-base",
@@ -598,7 +606,12 @@ export default function AnalyticsPage() {
                         <div className="flex items-center justify-between w-full">
                           <p className="text-lg font-bold">Weight Progress</p>
                           <Tooltip content="Shows your maximum weight lifted for this exercise over time">
-                            <Button isIconOnly variant="light" size="sm">
+                            <Button
+                              isIconOnly
+                              variant="light"
+                              size="sm"
+                              aria-label="Weight progress information" // Add this
+                            >
                               <Info size={16} className="text-default-400" />
                             </Button>
                           </Tooltip>
@@ -665,7 +678,12 @@ export default function AnalyticsPage() {
                         <div className="flex items-center justify-between w-full">
                           <p className="text-lg font-bold">Volume Progress</p>
                           <Tooltip content="Shows your total workout volume (weight × reps) over time">
-                            <Button isIconOnly variant="light" size="sm">
+                            <Button
+                              isIconOnly
+                              variant="light"
+                              size="sm"
+                              aria-label="Volume progress information" // Add this
+                            >
                               <Info size={16} className="text-default-400" />
                             </Button>
                           </Tooltip>
@@ -783,6 +801,7 @@ export default function AnalyticsPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full md:w-1/2"
                 size="lg"
+                aria-label="Search exercises in records" // Add this
                 classNames={{
                   inputWrapper: "h-12",
                 }}
@@ -860,6 +879,7 @@ export default function AnalyticsPage() {
                             setSelectedExercise(record.id);
                             setActiveTab("progress");
                           }}
+                          aria-label={`View progress for ${record.name}`} // Add this
                           endContent={<ChevronRight size={14} />}
                         >
                           View Progress
@@ -922,7 +942,12 @@ export default function AnalyticsPage() {
                       Top 10 Exercises by Volume
                     </p>
                     <Tooltip content="Shows your exercises ranked by total volume lifted (weight × reps)">
-                      <Button isIconOnly variant="light" size="sm">
+                      <Button
+                        isIconOnly
+                        variant="light"
+                        size="sm"
+                        aria-label="Volume analysis information" // Add this
+                      >
                         <Info size={16} className="text-default-400" />
                       </Button>
                     </Tooltip>
