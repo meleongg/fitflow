@@ -104,8 +104,8 @@ export default function PrivacyPolicy() {
               </li>
             </ul>
             <p>
-              To exercise these rights, please contact us using the information
-              provided in the "Contact Us" section.
+              To exercise these rights, you can manage most data-related
+              settings directly through your account preferences.
             </p>
           </section>
 
@@ -154,15 +154,6 @@ export default function PrivacyPolicy() {
               notify you of any changes by posting the new privacy policy on
               this page and updating the "Last updated" date at the top.
             </p>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-xl font-bold mb-4">11. Contact Us</h2>
-            <p>
-              If you have any questions about this privacy policy or our data
-              practices, please contact us at:
-            </p>
-            <p className="mt-2 font-medium">mthteo@gmail.com</p>
           </section>
 
           <div className="mt-8 pt-6 border-t border-gray-200">

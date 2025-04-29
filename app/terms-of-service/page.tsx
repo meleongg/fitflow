@@ -152,15 +152,6 @@ export default function TermsOfService() {
             </p>
           </section>
 
-          <section className="mb-8">
-            <h2 className="text-xl font-bold mb-4">11. Contact Us</h2>
-            <p>
-              If you have any questions about these Terms of Service, please
-              contact us at:
-            </p>
-            <p className="mt-2 font-medium">mthteo@gmail.com</p>
-          </section>
-
           <div className="mt-8 pt-6 border-t border-gray-200">
             <Link href="/" className="text-primary hover:underline">
               Return to Home

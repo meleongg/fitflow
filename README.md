@@ -32,7 +32,7 @@ FitFlow is a full-stack web application that helps users track their fitness pro
 
 ```bash
 # Clone and install
-git clone https://github.com/yourusername/fitflow.git
+git clone https://github.com/meleongg/fitflow.git
 cd fitflow
 npm install
 
