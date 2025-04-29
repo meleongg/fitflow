@@ -110,6 +110,25 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
+  // Add this function in your SessionContext
+  const validateStartTime = (timestamp: string): string => {
+    try {
+      const startTime = new Date(timestamp).getTime();
+      const currentTime = Date.now();
+
+      // If timestamp is in the future or more than 24 hours in the past, it's invalid
+      if (startTime > currentTime || currentTime - startTime > 86400000) {
+        console.warn("Invalid session timestamp detected, using current time");
+        return new Date().toISOString();
+      }
+
+      return timestamp;
+    } catch (e) {
+      console.error("Error validating timestamp:", e);
+      return new Date().toISOString();
+    }
+  };
+
   const startSession = (session: {
     user_id: string;
     workout_id: string;
@@ -127,12 +146,15 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       return; // Don't allow session start during cooldown
     }
 
+    // Validate the timestamp
+    const validatedTimestamp = validateStartTime(session.started_at);
+
     // Create the session object
     const newSession: ActiveSession = {
       id: session.user_id,
       workoutId: session.workout_id,
       workoutName: session.workout_name,
-      startTime: session.started_at,
+      startTime: validatedTimestamp,
       progress: {
         exercises: session.progress?.exercises ?? [],
       },

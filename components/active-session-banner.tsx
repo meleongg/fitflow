@@ -33,7 +33,7 @@ export default function ActiveSessionBanner() {
       try {
         const startTime = new Date(activeSession.startTime).getTime();
         const currentTime = Date.now();
-        return Math.floor((currentTime - startTime) / 60000);
+        return Math.max(0, Math.floor((currentTime - startTime) / 60000));
       } catch (error) {
         console.error("Error calculating elapsed time:", error);
         return 0;
