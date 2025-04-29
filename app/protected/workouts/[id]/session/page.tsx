@@ -1692,13 +1692,13 @@ export default function WorkoutSession() {
         backdrop="opaque"
         scrollBehavior="inside"
         classNames={{
-          base: "max-w-[95%] sm:max-w-3xl mx-auto h-[80vh] sm:h-auto",
-          wrapper: "items-start sm:items-center justify-center p-2 pt-8",
+          base: "max-w-[95%] sm:max-w-3xl mx-auto max-h-[70vh] sm:max-h-[80vh]", // Changed from fixed height to max-height
+          wrapper: "items-start justify-center p-2 pt-4", // Reduced top padding
           header:
             "pb-0 border-b border-default-200 sticky top-0 z-10 bg-background",
-          body: "p-4 overflow-auto",
+          body: "p-4 overflow-auto pb-24", // Added extra bottom padding for keyboard space
           footer:
-            "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-3 justify-end sticky bottom-0 z-10 bg-background border-t border-default-200",
+            "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-3 justify-end fixed bottom-0 left-0 right-0 z-20 bg-background border-t border-default-200", // Changed from sticky to fixed
           closeButton: "top-3 right-3",
         }}
       >
@@ -1714,7 +1714,9 @@ export default function WorkoutSession() {
                   today's performance? Select the exercises you want to update:
                 </p>
 
-                <div className="space-y-4 pb-2">
+                <div className="space-y-4 pb-16">
+                  {" "}
+                  {/* Added bottom padding to ensure content is visible above fixed footer */}
                   {Object.entries(workoutUpdates).map(
                     ([exerciseId, update]) => {
                       // Find the exercise in sessionExercises to get the name
