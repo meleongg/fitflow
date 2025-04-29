@@ -593,13 +593,14 @@ export default function ExerciseLibraryPage() {
         placement="top" // Changed from center to top
         scrollBehavior="inside"
         classNames={{
-          base: "max-w-[95%] sm:max-w-md mx-auto max-h-[80vh]", // Add max height
-          wrapper: "items-start sm:items-center justify-center p-2 pt-8", // Position better on mobile
+          base: "max-w-[95%] sm:max-w-md mx-auto max-h-[70vh]", // Reduced max height
+          wrapper: "items-start justify-center p-2 pt-4", // Less top padding
           header:
-            "pb-0 border-b border-default-200 sticky top-0 z-10 bg-background", // Make header sticky
-          body: "p-4 overflow-auto pb-12", // Add bottom padding for keyboard space
+            "pb-0 border-b border-default-200 sticky top-0 z-20 bg-background", // Higher z-index
+          body: "p-4 overflow-auto pb-24", // More bottom padding for keyboard space
           footer:
-            "pt-3 px-6 pb-5 flex flex-row gap-3 justify-end sticky bottom-0 z-10 bg-background border-t border-default-200", // Make footer sticky
+            "pt-3 px-6 pb-5 flex flex-row gap-3 justify-end fixed bottom-0 left-0 right-0 z-20 bg-background border-t border-default-200 w-full", // Changed to fixed positioning
+          closeButton: "top-3 right-3 z-20", // Ensure close button is above content
         }}
       >
         <ModalContent className="max-w-md mx-auto">
@@ -609,7 +610,9 @@ export default function ExerciseLibraryPage() {
                 {editExercise ? "Edit Exercise" : "Add New Exercise"}
               </ModalHeader>
               <ModalBody>
-                <div className="space-y-5">
+                <div className="space-y-5 pb-12">
+                  {" "}
+                  {/* Add extra padding at the bottom */}
                   <Input
                     label="Exercise Name"
                     placeholder="Enter exercise name"
@@ -631,7 +634,6 @@ export default function ExerciseLibraryPage() {
                     isRequired
                     isDisabled={isSaving}
                   />
-
                   <Select
                     label="Category"
                     placeholder="Select a category"
@@ -664,7 +666,6 @@ export default function ExerciseLibraryPage() {
                       </SelectItem>
                     ))}
                   </Select>
-
                   <Textarea
                     label="Description"
                     placeholder="Describe the exercise (optional)"
