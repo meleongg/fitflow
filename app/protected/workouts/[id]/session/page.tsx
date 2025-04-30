@@ -1692,13 +1692,13 @@ export default function WorkoutSession() {
         backdrop="opaque"
         scrollBehavior="inside"
         classNames={{
-          base: "max-w-[95%] sm:max-w-3xl mx-auto max-h-[70vh] sm:max-h-[80vh]", // Changed from fixed height to max-height
-          wrapper: "items-start justify-center p-2 pt-4", // Reduced top padding
+          base: "max-w-[95%] sm:max-w-3xl mx-auto max-h-[90vh] sm:max-h-[90vh]", // Increased height
+          wrapper: "items-start justify-center p-2 pt-4",
           header:
             "pb-0 border-b border-default-200 sticky top-0 z-10 bg-background",
-          body: "p-4 overflow-auto pb-24", // Added extra bottom padding for keyboard space
+          body: "p-4 overflow-auto pb-32", // Increased padding to make room for footer
           footer:
-            "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-3 justify-end fixed bottom-0 left-0 right-0 z-20 bg-background border-t border-default-200", // Changed from sticky to fixed
+            "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-3 justify-end sticky bottom-0 left-0 right-0 z-20 bg-background border-t border-default-200", // Changed from fixed to sticky
           closeButton: "top-3 right-3",
         }}
       >
