@@ -138,8 +138,15 @@ export default function WorkoutSession() {
       sets: number;
       reps: number;
       weight: number;
+      volume?: number; // Add volume property
       selected: boolean;
       isPR: boolean;
+      prTypes?: {
+        // Add prTypes property
+        weight: boolean;
+        reps: boolean;
+        volume: boolean;
+      };
       manuallyEdited: boolean;
     };
   }>({});
@@ -546,8 +553,15 @@ export default function WorkoutSession() {
         sets: number;
         reps: number;
         weight: number;
+        volume?: number; // Add volume property
         selected: boolean;
         isPR: boolean;
+        prTypes?: {
+          // Add prTypes property
+          weight: boolean;
+          reps: boolean;
+          volume: boolean;
+        };
         manuallyEdited: boolean;
       };
     } = {};
@@ -555,44 +569,70 @@ export default function WorkoutSession() {
     // Track if we have any updates to suggest
     let hasUpdatesToSuggest = false;
 
-    // Get existing PRs for comparison
+    // Get existing PRs with more metrics
     const { data: existingPRs } = await supabase
       .from("analytics")
-      .select("exercise_id, max_weight")
+      .select("exercise_id, max_weight, max_reps, max_volume")
       .eq("user_id", user.id);
 
+    // Create a more detailed PR map
     const prMap = new Map();
     existingPRs?.forEach((pr) => {
-      prMap.set(pr.exercise_id, pr.max_weight);
+      prMap.set(`${pr.exercise_id}_weight`, pr.max_weight || 0);
+      prMap.set(`${pr.exercise_id}_reps`, pr.max_reps || 0);
+      prMap.set(`${pr.exercise_id}_volume`, pr.max_volume || 0);
     });
 
-    // Calculate suggested updates based on session performance
+    // Calculate suggested updates with better PR detection
     sessionExercises.forEach((exercise) => {
       const completedSets = exercise.actualSets.filter((set) => set.completed);
       if (completedSets.length > 0) {
-        // Get the best weight and reps from completed sets
+        // Get the best metrics from completed sets
         const bestWeight = Math.max(
           ...completedSets.map((set) => set.weight || 0)
         );
         const bestReps = Math.max(...completedSets.map((set) => set.reps || 0));
 
-        // Check if this is a PR for weight
-        const isPR = bestWeight > (prMap.get(exercise.id) || 0);
+        // Calculate the best volume for a single set
+        const bestSetVolume = Math.max(
+          ...completedSets.map((set) => (set.weight || 0) * (set.reps || 0))
+        );
 
-        // Determine if we should suggest updates (did they exceed targets?)
+        // Check for different types of PRs
+        const isWeightPR =
+          bestWeight > (prMap.get(`${exercise.id}_weight`) || 0);
+        const isRepsPR = bestReps > (prMap.get(`${exercise.id}_reps`) || 0);
+        const isVolumePR =
+          bestSetVolume > (prMap.get(`${exercise.id}_volume`) || 0);
+
+        // A PR is achieved if any metric is a personal record
+        const isPR = isWeightPR || isRepsPR || isVolumePR;
+
+        // Define shouldUpdate - typically we should update if there's a PR or significant change
         const shouldUpdate =
-          bestWeight > exercise.targetWeight ||
-          bestReps > exercise.targetReps ||
-          completedSets.length !== exercise.actualSets.length;
+          isPR ||
+          completedSets.length !== exercise.targetSets ||
+          bestReps !== exercise.targetReps ||
+          bestWeight > exercise.targetWeight;
 
-        if (shouldUpdate) hasUpdatesToSuggest = true;
+        // Flag if we have any updates to suggest (used for modal display logic)
+        if (shouldUpdate) {
+          hasUpdatesToSuggest = true;
+        }
 
+        // Now with valid type and defined shouldUpdate
         updates[exercise.id] = {
           sets: completedSets.length,
           reps: bestReps,
           weight: bestWeight,
-          selected: shouldUpdate, // Pre-select exercises that exceeded targets
+          volume: bestSetVolume,
+          selected: shouldUpdate,
           isPR,
+          prTypes: {
+            weight: isWeightPR,
+            reps: isRepsPR,
+            volume: isVolumePR,
+          },
           manuallyEdited: false,
         };
       }
@@ -715,16 +755,9 @@ export default function WorkoutSession() {
               const numericWeight = Number(update.weight) || 0;
               const numericReps = Number(update.reps) || 0;
               const numericSets = Number(update.sets) || 0;
-              const volume = numericWeight * numericReps * numericSets;
 
-              // Log the exact payload we're sending
-              console.log("Analytics payload:", {
-                user_id: user.id,
-                exercise_id: update.exercise_id,
-                max_weight: numericWeight,
-                volume: volume,
-                updated_at: new Date().toISOString(),
-              });
+              // Calculate volume per set (better metric than total volume)
+              const volumePerSet = numericWeight * numericReps;
 
               const { data, error: analyticsError } = await supabase
                 .from("analytics")
@@ -733,28 +766,16 @@ export default function WorkoutSession() {
                     user_id: user.id,
                     exercise_id: update.exercise_id,
                     max_weight: numericWeight,
-                    volume: volume,
+                    max_reps: numericReps, // Store max reps
+                    max_volume: volumePerSet, // Store max volume per set
                     updated_at: new Date().toISOString(),
                   },
                   {
                     onConflict: "user_id,exercise_id",
-                    // Remove the "returning: minimal" option
                   }
                 );
 
-              if (analyticsError) {
-                console.error(
-                  "Detailed analytics error:",
-                  JSON.stringify(analyticsError)
-                );
-                // Log more details for debugging
-                console.error("Failed update data:", {
-                  user_id: user.id,
-                  exercise_id: update.exercise_id,
-                  max_weight: numericWeight,
-                  volume: volume,
-                });
-              }
+              // You'll need to modify your database schema to include max_reps and max_volume columns
             } catch (err) {
               console.error("Exception in analytics update:", err);
             }
@@ -1725,7 +1746,7 @@ export default function WorkoutSession() {
                       );
                       if (!exercise) return null;
 
-                      // Calculate if there's a difference
+                      // Change this isDifferent logic to be separate from PR detection:
                       const isDifferent =
                         update.sets !== exercise.targetSets ||
                         update.reps !== exercise.targetReps ||
@@ -1754,18 +1775,58 @@ export default function WorkoutSession() {
                                   });
                                 }}
                               />
-                              <span className="font-medium">
+                              <span className="font-medium truncate max-w-[120px] sm:max-w-full">
                                 {exercise.name}
                               </span>
                             </div>
-                            <div className="flex gap-2">
+
+                            {/* Responsive PR tags */}
+                            <div className="flex flex-wrap justify-end gap-1 max-w-[150px] sm:max-w-none">
                               {update.isPR && (
-                                <Chip color="success" size="sm">
-                                  New PR!
-                                </Chip>
+                                <>
+                                  <Chip
+                                    color="success"
+                                    size="sm"
+                                    className="h-6"
+                                  >
+                                    New PR!
+                                  </Chip>
+                                  <div className="flex flex-wrap gap-1 mt-1 sm:mt-0">
+                                    {update.prTypes?.weight && (
+                                      <Chip
+                                        variant="dot"
+                                        color="success"
+                                        size="sm"
+                                        className="h-6 text-xs sm:text-sm"
+                                      >
+                                        W
+                                      </Chip>
+                                    )}
+                                    {update.prTypes?.reps && (
+                                      <Chip
+                                        variant="dot"
+                                        color="success"
+                                        size="sm"
+                                        className="h-6 text-xs sm:text-sm"
+                                      >
+                                        R
+                                      </Chip>
+                                    )}
+                                    {update.prTypes?.volume && (
+                                      <Chip
+                                        variant="dot"
+                                        color="success"
+                                        size="sm"
+                                        className="h-6 text-xs sm:text-sm"
+                                      >
+                                        V
+                                      </Chip>
+                                    )}
+                                  </div>
+                                </>
                               )}
                               {update.manuallyEdited && (
-                                <Chip variant="flat" size="sm">
+                                <Chip variant="flat" size="sm" className="h-6">
                                   Edited
                                 </Chip>
                               )}
@@ -1867,10 +1928,11 @@ export default function WorkoutSession() {
                             </div>
                           </div>
 
-                          {/* Show the difference from current targets */}
+                          {/* Show the changes against workout defaults separately */}
                           {isDifferent && (
-                            <div className="mt-3 pl-7 text-xs text-success">
+                            <div className="mt-3 pl-7 text-xs text-default-500">
                               <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                <span>Changes from workout defaults:</span>
                                 {update.sets !== exercise.targetSets && (
                                   <span>
                                     Sets: {exercise.targetSets} →{" "}
@@ -2264,8 +2326,15 @@ export default function WorkoutSession() {
                         sets: number;
                         reps: number;
                         weight: number;
+                        volume?: number; // Add volume property
                         selected: boolean;
                         isPR: boolean;
+                        prTypes?: {
+                          // Add prTypes property
+                          weight: boolean;
+                          reps: boolean;
+                          volume: boolean;
+                        };
                         manuallyEdited: boolean;
                       };
                     } = {};
@@ -2273,24 +2342,27 @@ export default function WorkoutSession() {
                     // Track if we have any updates to suggest
                     let hasUpdatesToSuggest = false;
 
-                    // Get existing PRs for comparison
+                    // Get existing PRs with more metrics
                     const { data: existingPRs } = await supabase
                       .from("analytics")
-                      .select("exercise_id, max_weight")
+                      .select("exercise_id, max_weight, max_reps, max_volume")
                       .eq("user_id", user.id);
 
+                    // Create a more detailed PR map
                     const prMap = new Map();
                     existingPRs?.forEach((pr) => {
-                      prMap.set(pr.exercise_id, pr.max_weight);
+                      prMap.set(`${pr.exercise_id}_weight`, pr.max_weight || 0);
+                      prMap.set(`${pr.exercise_id}_reps`, pr.max_reps || 0);
+                      prMap.set(`${pr.exercise_id}_volume`, pr.max_volume || 0);
                     });
 
-                    // Calculate suggested updates based on session performance
+                    // Calculate suggested updates with better PR detection
                     sessionExercises.forEach((exercise) => {
                       const completedSets = exercise.actualSets.filter(
                         (set) => set.completed
                       );
                       if (completedSets.length > 0) {
-                        // Get the best weight and reps from completed sets
+                        // Get the best metrics from completed sets
                         const bestWeight = Math.max(
                           ...completedSets.map((set) => set.weight || 0)
                         );
@@ -2298,23 +2370,51 @@ export default function WorkoutSession() {
                           ...completedSets.map((set) => set.reps || 0)
                         );
 
-                        // Check if this is a PR for weight
-                        const isPR = bestWeight > (prMap.get(exercise.id) || 0);
+                        // Calculate the best volume for a single set
+                        const bestSetVolume = Math.max(
+                          ...completedSets.map(
+                            (set) => (set.weight || 0) * (set.reps || 0)
+                          )
+                        );
 
-                        // Determine if we should suggest updates (did they exceed targets?)
+                        // Check for different types of PRs
+                        const isWeightPR =
+                          bestWeight >
+                          (prMap.get(`${exercise.id}_weight`) || 0);
+                        const isRepsPR =
+                          bestReps > (prMap.get(`${exercise.id}_reps`) || 0);
+                        const isVolumePR =
+                          bestSetVolume >
+                          (prMap.get(`${exercise.id}_volume`) || 0);
+
+                        // A PR is achieved if any metric is a personal record
+                        const isPR = isWeightPR || isRepsPR || isVolumePR;
+
+                        // Define shouldUpdate - typically we should update if there's a PR or significant change
                         const shouldUpdate =
-                          bestWeight > exercise.targetWeight ||
-                          bestReps > exercise.targetReps ||
-                          completedSets.length !== exercise.actualSets.length;
+                          isPR ||
+                          completedSets.length !== exercise.targetSets ||
+                          bestReps !== exercise.targetReps ||
+                          bestWeight > exercise.targetWeight;
 
-                        if (shouldUpdate) hasUpdatesToSuggest = true;
+                        // Flag if we have any updates to suggest (used for modal display logic)
+                        if (shouldUpdate) {
+                          hasUpdatesToSuggest = true;
+                        }
 
+                        // Now with valid type and defined shouldUpdate
                         updates[exercise.id] = {
                           sets: completedSets.length,
                           reps: bestReps,
                           weight: bestWeight,
+                          volume: bestSetVolume,
                           selected: shouldUpdate,
                           isPR,
+                          prTypes: {
+                            weight: isWeightPR,
+                            reps: isRepsPR,
+                            volume: isVolumePR,
+                          },
                           manuallyEdited: false,
                         };
                       }
