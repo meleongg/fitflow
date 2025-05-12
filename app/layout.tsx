@@ -21,10 +21,53 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "FitFlow - Fitness Tracking App",
-  description: "Track your workouts and fitness progress",
+  description:
+    "Track your workouts and fitness progress with a simple, intuitive interface",
   manifest: "/manifest.json",
-  keywords: ["nextjs", "next14", "pwa", "next-pwa"],
+  keywords: [
+    "fitness app",
+    "workout tracker",
+    "strength training",
+    "exercise log",
+    "gym progress",
+    "fitness goals",
+  ],
   applicationName: "FitFlow",
+
+  // Open Graph / Facebook
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: defaultUrl,
+    title: "FitFlow - Your Personal Fitness Journey",
+    description:
+      "Track workouts, set goals, and visualize your fitness progress over time",
+    siteName: "FitFlow",
+    images: [
+      {
+        url: "/images/fitflow-og-image.png", // Create this 1200×630px image
+        width: 1200,
+        height: 630,
+        alt: "FitFlow App Dashboard",
+      },
+    ],
+  },
+
+  // Twitter
+  twitter: {
+    card: "summary_large_image",
+    title: "FitFlow - Fitness Tracking Made Simple",
+    description: "Easily track workouts and monitor your fitness journey",
+    images: ["/images/fitflow-twitter-image.png"],
+  },
+
+  // Additional SEO metadata
+  authors: [{ name: "Melvin Teo" }],
+  creator: "Melvin Teo",
+  publisher: "FitFlow",
+  category: "Fitness & Health",
+
+  // Rest of your existing metadata
   formatDetection: {
     telephone: false,
   },
