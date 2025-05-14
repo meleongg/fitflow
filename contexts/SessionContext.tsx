@@ -47,6 +47,7 @@ interface SessionContextProps {
   updateSessionProgress: (exercises: SessionExercise[]) => void;
   endSession: () => void;
   getElapsedMinutes: () => number;
+  formatSessionDate: (dateString: string) => string;
 }
 
 const SessionContext = createContext<SessionContextProps | undefined>(
@@ -70,13 +71,18 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
       if (savedSession) {
         const parsedSession = JSON.parse(savedSession);
-        // Validate session data
         if (
           parsedSession &&
           parsedSession.workoutId &&
-          parsedSession.workoutName
+          parsedSession.workoutName &&
+          parsedSession.startTime
         ) {
-          setActiveSession(parsedSession);
+          // Ensure startTime is a valid date string
+          const validDate = validateStartTime(parsedSession.startTime);
+          setActiveSession({
+            ...parsedSession,
+            startTime: validDate, // Ensure valid date format
+          });
         } else {
           // Invalid data, clear it
           localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -96,7 +102,16 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
       if (savedSession) {
         try {
-          setActiveSession(JSON.parse(savedSession));
+          const parsedSession = JSON.parse(savedSession);
+          if (parsedSession && parsedSession.startTime) {
+            // Ensure we have a valid date when loading from other tabs
+            parsedSession.startTime = validateStartTime(
+              parsedSession.startTime
+            );
+            setActiveSession(parsedSession);
+          } else {
+            setActiveSession(null);
+          }
         } catch (e) {
           console.error("Error parsing saved session:", e);
           setActiveSession(null);
@@ -110,10 +125,19 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  // Add this function in your SessionContext
+  // Enhanced date validation
   const validateStartTime = (timestamp: string): string => {
     try {
-      const startTime = new Date(timestamp).getTime();
+      // Check if the timestamp is a valid date string
+      const date = new Date(timestamp);
+
+      // If date is Invalid Date, this will be NaN
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date format detected, using current time");
+        return new Date().toISOString();
+      }
+
+      const startTime = date.getTime();
       const currentTime = Date.now();
 
       // If timestamp is in the future or more than 24 hours in the past, it's invalid
@@ -122,7 +146,8 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         return new Date().toISOString();
       }
 
-      return timestamp;
+      // Ensure we always return in ISO format
+      return date.toISOString();
     } catch (e) {
       console.error("Error validating timestamp:", e);
       return new Date().toISOString();
@@ -220,6 +245,29 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Add this helper to format dates consistently
+  const formatSessionDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "Unknown time";
+      }
+
+      // Format: "May 13, 2023 at 2:30 PM"
+      return date.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return "Unknown time";
+    }
+  };
+
   return (
     <SessionContext.Provider
       value={{
@@ -228,6 +276,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         updateSessionProgress,
         endSession,
         getElapsedMinutes,
+        formatSessionDate, // Add this to your context value
       }}
     >
       {children}

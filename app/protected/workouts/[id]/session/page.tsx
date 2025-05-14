@@ -113,6 +113,21 @@ interface SessionExercise {
   }[];
 }
 
+const formatSessionDate = (dateString: string | null): string => {
+  if (!dateString) return "Unknown time";
+
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return "Unknown time";
+    }
+    return date.toLocaleString();
+  } catch (e) {
+    console.error("Error formatting date:", e);
+    return "Unknown time";
+  }
+};
+
 export default function WorkoutSession() {
   const params = useParams();
   const workoutId = params.id as string;
@@ -251,24 +266,18 @@ export default function WorkoutSession() {
   // Start session when page loads
   useEffect(() => {
     if (!activeSession && workout && user) {
-      // Create the timestamp once and use it in both places
+      // Starting a new session
       const timestamp = new Date().toISOString();
-
-      // Set state for display purposes
       setSessionStartTime(timestamp);
 
-      console.log(
-        "Starting session with timestamp: from session page",
-        timestamp
-      );
-
-      // Use the same timestamp directly in the startSession call
       startSession({
         user_id: user.id,
         workout_id: workoutId,
         workout_name: workout.name,
-        started_at: timestamp, // Use direct value instead of state
+        started_at: timestamp,
       });
+    } else if (activeSession) {
+      setSessionStartTime(activeSession.startTime);
     }
   }, [workout, user, activeSession, workoutId, startSession]);
 
@@ -1117,10 +1126,7 @@ export default function WorkoutSession() {
             <p>{workout.description || "No description provided."}</p>
 
             <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-              <div>
-                Session started:{" "}
-                {new Date(sessionStartTime || "").toLocaleString()}
-              </div>
+              <div>Session started: {formatSessionDate(sessionStartTime)}</div>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 <SessionDuration />
