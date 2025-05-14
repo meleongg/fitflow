@@ -103,23 +103,6 @@ export default function ActiveSessionBanner() {
         </div>
       </div>
 
-      {/* Add a manual debug reset button in development */}
-      {process.env.NODE_ENV === "development" && (
-        <Button
-          size="sm"
-          className="mt-2 text-xs"
-          color="danger"
-          variant="ghost"
-          onPress={() => {
-            localStorage.removeItem("fitflow-active-session");
-            endSession();
-            window.location.reload();
-          }}
-        >
-          Force Reset (Debug)
-        </Button>
-      )}
-
       <Modal
         isOpen={showEndConfirmation}
         onClose={() => setShowEndConfirmation(false)}
