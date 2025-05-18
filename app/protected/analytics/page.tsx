@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
         const records =
           analyticsData?.map((record) => ({
             id: record.exercise_id,
-            name: record.exercise?.name,
+            name: record.exercise?.[0]?.name,
             max_weight: record.max_weight || 0,
             max_reps: record.max_reps || 0,
             max_volume: record.max_volume || 0,
@@ -350,8 +350,7 @@ export default function AnalyticsPage() {
     // Calculate volume trends by exercise
     const volumeByExercise = sessionsData.reduce(
       (acc: { [key: string]: number }, session) => {
-        const exerciseId = session.exercise_id;
-        const exerciseName = session.exercise?.name;
+        const exerciseName = session.exercise?.[0]?.name;
         const volume = session.reps * session.weight;
 
         if (!acc[exerciseName]) {
