@@ -480,25 +480,29 @@ export default function ViewWorkout() {
                 <TableHeader>
                   <TableColumn>DATE</TableColumn>
                   <TableColumn>DURATION</TableColumn>
-                  <TableColumn>EXERCISES COMPLETED</TableColumn>
-                  <TableColumn>NOTES</TableColumn>
                 </TableHeader>
                 <TableBody>
-                  {workoutHistory.map((session) => (
-                    <TableRow key={session.id}>
-                      <TableCell>
-                        {new Date(session.ended_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {Math.floor(session.duration_seconds / 60)} min{" "}
-                        {session.duration_seconds % 60} sec
-                      </TableCell>
-                      <TableCell>
-                        {session.exercises_completed || "-"}
-                      </TableCell>
-                      <TableCell>{session.notes || "-"}</TableCell>
-                    </TableRow>
-                  ))}
+                  {workoutHistory.map((session) => {
+                    // Calculate duration from timestamps
+                    const startTime = new Date(session.started_at).getTime();
+                    const endTime = new Date(session.ended_at).getTime();
+                    const durationSeconds = Math.floor(
+                      (endTime - startTime) / 1000
+                    );
+                    const minutes = Math.floor(durationSeconds / 60);
+                    const seconds = durationSeconds % 60;
+
+                    return (
+                      <TableRow key={session.id}>
+                        <TableCell>
+                          {new Date(session.ended_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {minutes} min {seconds} sec
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             ) : (
