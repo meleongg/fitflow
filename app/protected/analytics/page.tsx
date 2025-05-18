@@ -111,7 +111,7 @@ export default function AnalyticsPage() {
           max_reps,
           max_volume,
           updated_at,
-          exercise:exercises(name)
+          exercises(name)
         `
           )
           .eq("user_id", user.id);
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
         const records =
           analyticsData?.map((record) => ({
             id: record.exercise_id,
-            name: record.exercise?.[0]?.name,
+            name: (record.exercises as any)?.name,
             max_weight: record.max_weight || 0,
             max_reps: record.max_reps || 0,
             max_volume: record.max_volume || 0,
@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
           .from("session_exercises")
           .select(
             `
-          id, reps, weight, exercise_id, 
+          id, reps, weight, exercise_id,
           exercise:exercises(name),
           session:sessions(started_at)
         `
@@ -207,10 +207,6 @@ export default function AnalyticsPage() {
   const handleExerciseChange = (value: string) => {
     setIsChartLoading(true);
     setSelectedExercise(value);
-
-    // Find the exercise name for the toast message
-    const selectedExerciseName =
-      exercises.find((ex) => ex.id === value)?.name || "Exercise";
 
     if (sessions.length > 0) {
       try {
@@ -350,7 +346,7 @@ export default function AnalyticsPage() {
     // Calculate volume trends by exercise
     const volumeByExercise = sessionsData.reduce(
       (acc: { [key: string]: number }, session) => {
-        const exerciseName = session.exercise?.[0]?.name;
+        const exerciseName = session.exercise?.name;
         const volume = session.reps * session.weight;
 
         if (!acc[exerciseName]) {
@@ -404,9 +400,10 @@ export default function AnalyticsPage() {
   };
 
   // Filter personal records based on search
-  const filteredRecords = personalRecords.filter((record) =>
-    record.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRecords = personalRecords.filter((record) => {
+    const exerciseName = record.name;
+    return exerciseName.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   // Format the date
   const formatDate = (dateString: string) => {
