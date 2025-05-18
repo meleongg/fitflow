@@ -918,7 +918,12 @@ export default function AnalyticsPage() {
                               Max Volume
                             </span>
                             <span className="font-bold text-sm md:text-base">
-                              {displayWeight(record.max_volume, useMetric)}
+                              {displayWeight(
+                                record.max_volume,
+                                useMetric,
+                                true,
+                                0
+                              )}
                             </span>
                           </div>
                         </div>
