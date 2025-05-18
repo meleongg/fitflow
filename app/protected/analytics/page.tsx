@@ -102,31 +102,59 @@ export default function AnalyticsPage() {
           .select("id, name, category:categories(name)")
           .or(`is_default.eq.true,user_id.eq.${user.id}`);
 
-        // Get all completed session exercises with dates
+        const { data: analyticsData, error: analyticsError } = await supabase
+          .from("analytics")
+          .select(
+            `
+          exercise_id,
+          max_weight,
+          max_reps,
+          max_volume,
+          updated_at,
+          exercise:exercises(name)
+        `
+          )
+          .eq("user_id", user.id);
+
+        if (analyticsError) {
+          throw new Error(
+            `Error fetching analytics: ${analyticsError.message}`
+          );
+        }
+
+        // Transform analytics data to personal records format
+        const records =
+          analyticsData?.map((record) => ({
+            id: record.exercise_id,
+            name: record.exercise?.name,
+            max_weight: record.max_weight || 0,
+            max_reps: record.max_reps || 0,
+            max_volume: record.max_volume || 0,
+            date: record.updated_at,
+          })) || [];
+
+        setExercises(exercisesData || []);
+        setPersonalRecords(records);
+
+        // Still need session data for charts
         const { data: sessionsData } = await supabase
           .from("session_exercises")
           .select(
             `
-            id,
-            reps,
-            weight,
-            exercise_id,
-            exercise:exercises(name),
-            session:sessions(started_at)
-          `
+          id, reps, weight, exercise_id, 
+          exercise:exercises(name),
+          session:sessions(started_at)
+        `
           )
           .eq("user_id", user.id)
           .order("session(started_at)", { ascending: false });
 
-        // Calculate and set data
-        setExercises(exercisesData || []);
         setSessions(sessionsData || []);
-        calculatePersonalRecords(sessionsData || []);
-        calculateVolumeData(sessionsData || []); // Add this line
+        calculateVolumeData(sessionsData || []);
 
         // Show success toast with key stats
         toast.success(
-          `Loaded ${exercisesData?.length || 0} exercises and ${Object.keys(calculatePersonalRecords(sessionsData || [])).length || 0} personal records`,
+          `Loaded ${exercisesData?.length || 0} exercises and ${records.length || 0} personal records`,
           {
             id: loadingToast,
           }
@@ -251,45 +279,6 @@ export default function AnalyticsPage() {
     if (key === "volume" && sessions.length > 0) {
       calculateVolumeData(sessions);
     }
-  };
-
-  // Calculate personal records from session data
-  const calculatePersonalRecords = (sessionsData: any[]) => {
-    const records: { [key: string]: any } = {};
-
-    sessionsData?.forEach((session) => {
-      const exerciseId = session.exercise_id;
-      const exerciseName = session.exercise?.name;
-      const weight = session.weight;
-      const volume = session.reps * session.weight;
-
-      if (!records[exerciseId]) {
-        records[exerciseId] = {
-          id: exerciseId,
-          name: exerciseName,
-          max_weight: weight,
-          max_volume: volume,
-          max_reps: session.reps,
-          date: session.session?.started_at,
-        };
-      } else {
-        if (weight > records[exerciseId].max_weight) {
-          records[exerciseId].max_weight = weight;
-          records[exerciseId].date = session.session?.started_at;
-        }
-
-        if (volume > records[exerciseId].max_volume) {
-          records[exerciseId].max_volume = volume;
-        }
-
-        if (session.reps > records[exerciseId].max_reps) {
-          records[exerciseId].max_reps = session.reps;
-        }
-      }
-    });
-
-    setPersonalRecords(Object.values(records));
-    return records; // Return records for the toast notification
   };
 
   // Process data for an individual exercise
