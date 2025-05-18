@@ -723,6 +723,10 @@ export default function WorkoutSession() {
           if (update.isPR) {
             try {
               const numericWeight = Number(update.weight) || 0;
+              const numericReps = Number(update.reps) || 0;
+
+              // Calculate volume (weight × reps)
+              const volume = numericWeight * numericReps;
 
               const { data, error: analyticsError } = await supabase
                 .from("analytics")
@@ -731,12 +735,18 @@ export default function WorkoutSession() {
                     user_id: user.id,
                     exercise_id: update.exercise_id,
                     max_weight: numericWeight,
+                    max_reps: numericReps,
+                    max_volume: volume,
                     updated_at: new Date().toISOString(),
                   },
                   {
                     onConflict: "user_id,exercise_id",
                   }
                 );
+
+              if (analyticsError) {
+                console.error("Analytics update error:", analyticsError);
+              }
             } catch (err) {
               console.error("Exception in analytics update:", err);
             }
@@ -2332,20 +2342,7 @@ export default function WorkoutSession() {
       </Modal>
 
       {/* Cancel Workout Confirmation Modal */}
-      <Modal
-        isOpen={isCancelConfirmOpen}
-        onClose={onCancelConfirmClose}
-        backdrop="opaque"
-        placement="center"
-        size="sm"
-        classNames={{
-          base: "max-w-[95%] sm:max-w-md mx-auto",
-          header: "pb-0",
-          body: "px-6 py-5",
-          footer: "pt-3 px-6 pb-5 flex flex-col sm:flex-row gap-2",
-          closeButton: "top-3 right-3",
-        }}
-      >
+      <Modal isOpen={isCancelConfirmOpen} onClose={onCancelConfirmClose}>
         <ModalContent>
           {(onClose) => (
             <>
